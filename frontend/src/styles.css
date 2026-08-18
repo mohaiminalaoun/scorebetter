@@ -1,0 +1,144 @@
+:root {
+  font-family: system-ui, -apple-system, sans-serif;
+  color: #1a1a1a;
+  background: #fafafa;
+}
+
+body {
+  margin: 0;
+}
+
+.page {
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 4rem;
+}
+
+h1 {
+  font-size: 1.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #666;
+}
+
+.passage {
+  font-size: 1.05rem;
+  line-height: 1.6;
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.prompt {
+  font-weight: 600;
+}
+
+.options {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+}
+
+.option.selected {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.option.maybe {
+  border-color: #d97706;
+  background: #fffbeb;
+}
+
+.option.eliminated {
+  opacity: 0.55;
+}
+
+.option.eliminated .option-text {
+  text-decoration: line-through;
+}
+
+.option-text {
+  display: flex;
+  gap: 0.75rem;
+  align-items: baseline;
+}
+
+.option-id {
+  font-weight: 700;
+  color: #666;
+}
+
+.marks {
+  display: flex;
+  gap: 0.35rem;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+  border-radius: 6px;
+  border: 1px solid #d4d4d4;
+  background: #fff;
+  padding: 0.35rem 0.7rem;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.mark.active {
+  background: #1a1a1a;
+  color: #fff;
+  border-color: #1a1a1a;
+}
+
+.submit {
+  padding: 0.6rem 1.4rem;
+  font-weight: 600;
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+}
+
+.result {
+  margin-top: 1.5rem;
+  border: 1px solid #e5e5e5;
+  border-left-width: 4px;
+  border-radius: 8px;
+  padding: 1rem;
+  background: #fff;
+}
+
+.result.correct {
+  border-left-color: #16a34a;
+}
+
+.result.incorrect {
+  border-left-color: #dc2626;
+}
+
+.result h2 {
+  margin-top: 0;
+  font-size: 1.1rem;
+}
+
+.error {
+  color: #dc2626;
+}
