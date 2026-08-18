@@ -10,7 +10,8 @@ import type { SubmitAnswerResultDto } from './dto/submit-answer-result.dto';
 @Injectable()
 export class QuizService {
   getFirstQuestion(): PublicQuestionDto {
-    const { correctOptionId, ...pub } = getFirstQuestion();
+    const { optionRanking, optionAnalysis, source, ...pub } =
+      getFirstQuestion();
     return pub;
   }
 
@@ -20,12 +21,13 @@ export class QuizService {
       throw new NotFoundException(`Unknown question: ${dto.questionId}`);
     }
 
+    const correctOptionId = question.optionRanking[0];
+
     return {
-      correct: dto.selectedOptionId === question.correctOptionId,
-      correctOptionId: question.correctOptionId,
+      correct: dto.selectedOptionId === correctOptionId,
+      correctOptionId,
       selectedOptionId: dto.selectedOptionId,
-      secondChoiceWasCorrect:
-        dto.secondChoiceOptionId === question.correctOptionId,
+      secondChoiceWasCorrect: dto.secondChoiceOptionId === correctOptionId,
     };
   }
 }

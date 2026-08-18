@@ -2,6 +2,9 @@ import type { Question } from '../../questions/question.model';
 
 /**
  * Response body for GET /api/question — the question as the client may see it,
- * with the correct answer stripped out.
+ * with all answer and authoring metadata stripped out.
  */
-export type PublicQuestionDto = Omit<Question, 'correctOptionId'>;
+export type PublicQuestionDto = Omit<
+  Question,
+  'optionRanking' | 'optionAnalysis' | 'source'
+>;
