@@ -23,10 +23,12 @@ cd frontend && npm install && npm run dev   # http://localhost:5173
 
 - `GET  /api/question` — the current question. Omits the correct answer.
 - `POST /api/submit` — `{ questionId, selectedOptionId, secondChoiceOptionId, eliminatedOptionIds }`
-  returns `{ correct, correctOptionId, selectedOptionId, secondChoiceWasCorrect }`.
+  returns `{ correct, correctOptionId, selectedOptionId, secondChoiceWasCorrect, label, explanation }`.
 
-The correct answer lives only in `backend/src/questions.data.ts` and is never
-sent to the client before submission.
+The authored option ranking lives only in
+`backend/src/questions/sat-reading-writing.questions.ts` and is never sent to
+the client before submission. Rank 1 is the correct answer; rank 2 is the
+authored primary trap.
 
 ## Marking rules
 
