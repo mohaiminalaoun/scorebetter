@@ -35,6 +35,11 @@ export type SubmitResult = {
   secondChoiceWasCorrect: boolean;
   label: DiagnosticLabel;
   explanation: string[];
+  trapExplanation: {
+    optionId: string;
+    whyTempting: string;
+    whyWrong: string;
+  };
 };
 
 export type SubmitAnswerPayload = {

@@ -44,6 +44,15 @@ export class QuizService {
     const trapOptionId = question.optionRanking[1];
     const label = classifyMarks(dto, question.optionRanking);
 
+    const trapAnalysis = question.optionAnalysis.find(
+      (a) => a.optionId === trapOptionId,
+    );
+    if (!trapAnalysis) {
+      throw new Error(
+        `Incomplete option analysis for question: ${question.id}`,
+      );
+    }
+
     return {
       correct: dto.selectedOptionId === correctOptionId,
       correctOptionId,
@@ -52,6 +61,11 @@ export class QuizService {
       secondChoiceWasCorrect: dto.secondChoiceOptionId === correctOptionId,
       label,
       explanation: buildDiagnosticExplanation(label, question, dto),
+      trapExplanation: {
+        optionId: trapOptionId,
+        whyTempting: trapAnalysis.likelyReasoning,
+        whyWrong: trapAnalysis.rationale,
+      },
     };
   }
 

@@ -1,5 +1,11 @@
 import type { DiagnosticLabel } from '../diagnostic-classifier';
 
+export type TrapExplanation = {
+  optionId: string;
+  whyTempting: string;
+  whyWrong: string;
+};
+
 /** Response body for POST /api/submit. */
 export type SubmitAnswerResultDto = {
   correct: boolean;
@@ -9,4 +15,5 @@ export type SubmitAnswerResultDto = {
   secondChoiceWasCorrect: boolean;
   label: DiagnosticLabel;
   explanation: string[];
+  trapExplanation: TrapExplanation;
 };

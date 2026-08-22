@@ -214,3 +214,19 @@ test('submit rejects a malformed second-choice value at runtime', () => {
     BadRequestException,
   );
 });
+
+test('submit returns trap explanation with whyTempting and whyWrong', () => {
+  const question = getFirstQuestion();
+  const service = new QuizService();
+
+  const result = service.submit({
+    questionId: question.id,
+    selectedOptionId: question.optionRanking[0],
+  });
+
+  assert.ok(result.trapExplanation);
+  assert.equal(result.trapExplanation.optionId, question.optionRanking[1]);
+  assert.ok(result.trapExplanation.whyTempting.length > 0);
+  assert.ok(result.trapExplanation.whyWrong.length > 0);
+});
+

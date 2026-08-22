@@ -65,12 +65,28 @@ h1 {
   background: #fffbeb;
 }
 
-.option.eliminated {
+.option.eliminated .option-text,
+.option.eliminated .marks {
   opacity: 0.55;
 }
 
 .option.eliminated .option-text {
   text-decoration: line-through;
+}
+
+.option.revealed-correct {
+  border-color: #16a34a;
+  background: #f0fdf4;
+}
+
+.option.revealed-correct .option-text {
+  text-decoration: none;
+  opacity: 1;
+}
+
+.option.revealed-wrong {
+  border-color: #dc2626;
+  background: #fef2f2;
 }
 
 .option-text {
@@ -101,6 +117,12 @@ h1 {
 .pill-trap {
   background: #fee2e2;
   color: #b91c1c;
+}
+
+button.pill {
+  border: none;
+  padding: 0.15rem 0.5rem;
+  cursor: pointer;
 }
 
 .marks {
@@ -137,33 +159,147 @@ button:disabled {
 }
 
 .result {
+  display: flex;
+  align-items: stretch;
   margin-top: 1.5rem;
-  border: 1px solid #e5e5e5;
-  border-left-width: 4px;
-  border-radius: 8px;
-  padding: 1rem;
+  border-radius: 0 8px 8px 0;
+  overflow: hidden;
   background: #fff;
+  box-shadow: 0 0 0 1px #e5e5e5;
+}
+
+.result-bar {
+  width: 10px;
+  flex: 0 0 10px;
+  align-self: stretch;
+  background: #999;
 }
 
 .result.correct {
-  border-left-color: #16a34a;
+  background: #f0fdf4;
+}
+
+.result.correct .result-bar {
+  background: #16a34a;
 }
 
 .result.incorrect {
-  border-left-color: #dc2626;
+  background: #fef2f2;
 }
 
-.result h2 {
+.result.incorrect .result-bar {
+  background: #dc2626;
+}
+
+.result-body {
+  flex: 1;
+  min-width: 0;
+  padding: 1.1rem 1.15rem 1.2rem;
+}
+
+.result-body > h3 {
   margin-top: 0;
-  font-size: 1.1rem;
+}
+
+.result-head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.45rem;
 }
 
 .diagnostic-label {
-  font-weight: 600;
-  margin-top: 1rem;
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 650;
+  line-height: 1.3;
 }
 
-.diagnostic-explanation {
+.result-picks {
+  margin: 0.7rem 0 0;
+  color: #444;
+}
+
+.result-note {
+  margin: 0.4rem 0 0;
+  color: #444;
+  font-size: 0.925rem;
+}
+
+.choice-letter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.35em;
+  padding: 0.05em 0.4em;
+  border-radius: 4px;
+  font-weight: 700;
+}
+
+.choice-letter-correct {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.choice-letter-wrong {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.diagnostic-summary {
+  margin: 0.85rem 0 0;
+  color: #444;
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.analysis-blocks {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.9rem;
+}
+
+@media (min-width: 640px) {
+  .analysis-blocks {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.analysis-block {
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  padding: 0.75rem 0.85rem;
+}
+
+.analysis-block.correct {
+  border-color: #bbf7d0;
+}
+
+.analysis-block.wrong {
+  border-color: #fecaca;
+}
+
+.analysis-kicker {
+  margin: 0 0 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.analysis-kicker.correct {
+  color: #15803d;
+}
+
+.analysis-kicker.wrong {
+  color: #b91c1c;
+}
+
+.analysis-block p:last-child {
+  margin: 0;
+  font-size: 0.925rem;
+  line-height: 1.55;
   color: #444;
 }
 
@@ -206,6 +342,90 @@ button:disabled {
   margin-top: 1.25rem;
 }
 
-.summary-item.unanswered {
-  border-left-color: #999;
+.trap-toggle {
+  font: inherit;
+  cursor: pointer;
+  border-radius: 6px;
+  border: 1px solid #d97706;
+  background: #fffbeb;
+  color: #b45309;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  opacity: 1;
+}
+
+.trap-toggle:hover {
+  background: #fed7aa;
+  border-color: #b45309;
+}
+
+.trap-explanation-panel {
+  margin-top: 1.5rem;
+  border: 1px solid #fecaca;
+  border-radius: 0 8px 8px 0;
+  overflow: hidden;
+  background: #fef2f2;
+  padding: 1.1rem 1.15rem 1.2rem;
+}
+
+.trap-panel-title {
+  margin: 0 0 0.85rem;
+  font-size: 1.2rem;
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+.trap-blocks {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .trap-blocks {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.trap-block {
+  background: #fff;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 0.75rem 0.85rem;
+}
+
+.trap-block.why-tempting {
+  border-color: #fed7aa;
+}
+
+.trap-block.why-wrong {
+  border-color: #fecaca;
+}
+
+.trap-block.trap-vs-correct {
+  background: #fff;
+  border: 1px solid #bbf7d0;
+  grid-column: 1 / -1;
+}
+
+.trap-kicker {
+  margin: 0 0 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #b91c1c;
+}
+
+.trap-block.trap-vs-correct .trap-kicker {
+  color: #15803d;
+}
+
+.trap-block p:last-child {
+  margin: 0;
+  font-size: 0.925rem;
+  line-height: 1.55;
+  color: #444;
 }
