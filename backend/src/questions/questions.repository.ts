@@ -12,3 +12,7 @@ export function findQuestion(id: string): Question | undefined {
 export function getFirstQuestion(): Question {
   return QUESTIONS[0];
 }
+
+export function getAllQuestions(): Question[] {
+  return QUESTIONS;
+}

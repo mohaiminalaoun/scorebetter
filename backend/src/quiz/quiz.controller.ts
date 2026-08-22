@@ -13,6 +13,11 @@ export class QuizController {
     return this.quizService.getFirstQuestion();
   }
 
+  @Get('questions')
+  getQuestions(): PublicQuestionDto[] {
+    return this.quizService.getAllQuestions();
+  }
+
   @Post('submit')
   submit(@Body() body: SubmitAnswerDto): SubmitAnswerResultDto {
     return this.quizService.submit(body);

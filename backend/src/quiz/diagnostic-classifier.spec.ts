@@ -108,8 +108,67 @@ test('submit returns a diagnostic label and explanation', () => {
   });
 
   assert.equal(result.label, 'crystal-clear');
-  assert.match(result.explanation, /Correct-answer reasoning:/);
-  assert.match(result.explanation, /Primary-trap analysis:/);
+  assert.ok(
+    result.explanation.some((part) =>
+      part.startsWith(`Correct-answer reasoning (${question.optionRanking[0]}):`),
+    ),
+  );
+});
+
+test('explanation heading matches the primary trap when the trap is what was selected', () => {
+  const question = getFirstQuestion();
+  const service = new QuizService();
+  const trapOptionId = question.optionRanking[1];
+
+  const result = service.submit({
+    questionId: question.id,
+    selectedOptionId: trapOptionId,
+  });
+
+  assert.ok(
+    result.explanation.some((part) =>
+      part.startsWith(`Primary-trap analysis (${trapOptionId}):`),
+    ),
+  );
+});
+
+test('explanation heading matches the selected option\'s own classification, not the primary trap', () => {
+  const question = getFirstQuestion();
+  const service = new QuizService();
+  const secondaryDistractorOptionId = question.optionRanking[2];
+
+  const result = service.submit({
+    questionId: question.id,
+    selectedOptionId: secondaryDistractorOptionId,
+    secondChoiceOptionId: question.optionRanking[0],
+  });
+
+  assert.equal(result.label, 'doubted-truth');
+  assert.ok(
+    result.explanation.some((part) =>
+      part.startsWith(
+        `Secondary-distractor analysis (${secondaryDistractorOptionId}):`,
+      ),
+    ),
+  );
+  assert.ok(!result.explanation.some((part) => part.startsWith('Primary-trap analysis')));
+});
+
+test('explanation uses a student-facing heading for a weak-distractor selection', () => {
+  const question = getFirstQuestion();
+  const service = new QuizService();
+  const weakDistractorOptionId = question.optionRanking[3];
+
+  const result = service.submit({
+    questionId: question.id,
+    selectedOptionId: weakDistractorOptionId,
+  });
+
+  assert.ok(
+    result.explanation.some((part) =>
+      part.startsWith(`Why this doesn't hold up (${weakDistractorOptionId}):`),
+    ),
+  );
 });
 
 test('submit rejects an option ID outside the question', () => {

@@ -84,6 +84,25 @@ h1 {
   color: #666;
 }
 
+.pill {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+}
+
+.pill-correct {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.pill-trap {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
 .marks {
   display: flex;
   gap: 0.35rem;
@@ -139,6 +158,54 @@ button:disabled {
   font-size: 1.1rem;
 }
 
+.diagnostic-label {
+  font-weight: 600;
+  margin-top: 1rem;
+}
+
+.diagnostic-explanation {
+  color: #444;
+}
+
 .error {
   color: #dc2626;
+}
+
+.progress {
+  color: #666;
+  font-size: 0.9rem;
+  margin-top: 0;
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #e5e5e5;
+}
+
+.pager-status {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.summary-heading {
+  margin-bottom: 0;
+}
+
+.summary-score {
+  color: #666;
+  font-weight: 600;
+  margin-top: 0.25rem;
+}
+
+.summary-item {
+  margin-top: 1.25rem;
+}
+
+.summary-item.unanswered {
+  border-left-color: #999;
 }

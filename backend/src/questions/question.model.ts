@@ -23,12 +23,24 @@ export type OptionAnalysis = {
   likelyReasoning: string;
 };
 
-export type QuestionSource = {
-  publisher: 'College Board';
-  documentTitle: string;
-  url: string;
-  questionNumber: string;
-};
+/**
+ * Where a question came from. Official items carry College Board provenance;
+ * original items are ScoreBetter-authored practice written to mirror SAT
+ * structure. `authoredBy: 'ai-draft'` flags questions that still need human
+ * review before their trap rankings are trusted.
+ */
+export type QuestionSource =
+  | {
+      publisher: 'College Board';
+      documentTitle: string;
+      url: string;
+      questionNumber: string;
+    }
+  | {
+      publisher: 'ScoreBetter';
+      origin: 'original-practice';
+      authoredBy: 'ai-draft' | 'human';
+    };
 
 export type Question = {
   id: string;

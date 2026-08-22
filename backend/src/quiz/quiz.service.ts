@@ -6,6 +6,7 @@ import {
 import type { Question } from '../questions/question.model';
 import {
   findQuestion,
+  getAllQuestions as getAllQuestionsFromRepo,
   getFirstQuestion,
 } from '../questions/questions.repository';
 import {
@@ -24,6 +25,13 @@ export class QuizService {
     return pub;
   }
 
+  getAllQuestions(): PublicQuestionDto[] {
+    return getAllQuestionsFromRepo().map((question) => {
+      const { optionRanking, optionAnalysis, source, ...pub } = question;
+      return pub;
+    });
+  }
+
   submit(dto: SubmitAnswerDto): SubmitAnswerResultDto {
     const question = findQuestion(dto.questionId);
     if (!question) {
@@ -33,15 +41,17 @@ export class QuizService {
     this.validateMarks(dto, question);
 
     const correctOptionId = question.optionRanking[0];
+    const trapOptionId = question.optionRanking[1];
     const label = classifyMarks(dto, question.optionRanking);
 
     return {
       correct: dto.selectedOptionId === correctOptionId,
       correctOptionId,
+      trapOptionId,
       selectedOptionId: dto.selectedOptionId,
       secondChoiceWasCorrect: dto.secondChoiceOptionId === correctOptionId,
       label,
-      explanation: buildDiagnosticExplanation(label, question),
+      explanation: buildDiagnosticExplanation(label, question, dto),
     };
   }
 

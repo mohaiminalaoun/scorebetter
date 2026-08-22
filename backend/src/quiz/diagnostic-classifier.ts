@@ -1,4 +1,4 @@
-import type { Question } from '../questions/question.model';
+import type { OptionClassification, Question } from '../questions/question.model';
 
 export type DiagnosticLabel =
   | 'crystal-clear'
@@ -36,6 +36,15 @@ const DIAGNOSTIC_SUMMARIES: Record<DiagnosticLabel, string> = {
     'You kept the correct answer as your second choice but selected a weaker distractor instead. This suggests that your initial understanding was stronger than your final decision.',
   lost:
     'Neither your answer nor your second choice matched the correct answer or the strongest distractor. Rework the question from the beginning and identify exactly what it is asking.',
+};
+
+const WRONG_OPTION_ANALYSIS_HEADINGS: Record<
+  Exclude<OptionClassification, 'correct'>,
+  string
+> = {
+  'primary-trap': 'Primary-trap analysis',
+  'secondary-distractor': 'Secondary-distractor analysis',
+  'weak-distractor': "Why this doesn't hold up",
 };
 
 /**
@@ -82,23 +91,37 @@ export function classifyMarks(
 export function buildDiagnosticExplanation(
   label: DiagnosticLabel,
   question: Question,
-): string {
+  marks: Marks,
+): string[] {
   const correctOptionId = question.optionRanking[0];
-  const trapOptionId = question.optionRanking[1];
-  const correctAnalysis = question.optionAnalysis.find(
-    (analysis) => analysis.optionId === correctOptionId,
-  );
-  const trapAnalysis = question.optionAnalysis.find(
-    (analysis) => analysis.optionId === trapOptionId,
-  );
+  const findAnalysis = (optionId: string) => {
+    const analysis = question.optionAnalysis.find(
+      (a) => a.optionId === optionId,
+    );
+    if (!analysis) {
+      throw new Error(
+        `Incomplete option analysis for question: ${question.id}`,
+      );
+    }
+    return analysis;
+  };
 
-  if (!correctAnalysis || !trapAnalysis) {
-    throw new Error(`Incomplete option analysis for question: ${question.id}`);
+  const correctAnalysis = findAnalysis(correctOptionId);
+
+  const parts = [
+    DIAGNOSTIC_SUMMARIES[label],
+    `Correct-answer reasoning (${correctAnalysis.optionId}): ${correctAnalysis.rationale}`,
+  ];
+
+  const selectedOptionId = marks.selectedOptionId;
+  if (selectedOptionId !== correctOptionId) {
+    const selectedAnalysis = findAnalysis(selectedOptionId);
+    const heading =
+      WRONG_OPTION_ANALYSIS_HEADINGS[
+        selectedAnalysis.classification as Exclude<OptionClassification, 'correct'>
+      ];
+    parts.push(`${heading} (${selectedAnalysis.optionId}): ${selectedAnalysis.rationale}`);
   }
 
-  return [
-    DIAGNOSTIC_SUMMARIES[label],
-    `Correct-answer reasoning: ${correctAnalysis.rationale}`,
-    `Primary-trap analysis: ${trapAnalysis.rationale}`,
-  ].join(' ');
+  return parts;
 }
