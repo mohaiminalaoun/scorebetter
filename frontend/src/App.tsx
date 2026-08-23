@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type RefObject } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { fetchQuestions, submitAnswer } from './api';
 import type { DiagnosticLabel, Mark, Marks, Question, SubmitResult } from './types';
 
@@ -59,6 +59,171 @@ function splitExplanation(parts: string[]) {
   };
 }
 
+type OptionRevealRole = 'correct' | 'wrong-pick' | 'trap';
+
+/** How the student handled this option — drives card color after submit. */
+type OptionOutcome = 'good' | 'mistake' | 'neutral';
+
+function getOptionOutcome(
+  optionId: string,
+  result: SubmitResult,
+  optionMarks: Marks,
+): OptionOutcome {
+  const mark = optionMarks[optionId];
+  const isCorrect = optionId === result.correctOptionId;
+  const isTrap = optionId === result.trapOptionId;
+  const isWrongPick = optionId === result.selectedOptionId && !result.correct;
+
+  if (isWrongPick) return 'mistake';
+
+  if (isCorrect) {
+    if (mark === 'eliminated') return 'mistake';
+    if (result.correct && mark === 'selected') return 'good';
+    if (result.secondChoiceWasCorrect && mark === 'maybe') return 'good';
+    return 'neutral';
+  }
+
+  if (isTrap) {
+    if (mark === 'maybe' || mark === 'eliminated') return 'good';
+    return 'neutral';
+  }
+
+  if (mark === 'eliminated') return 'good';
+  return 'neutral';
+}
+
+function getOptionRevealRole(
+  optionId: string,
+  result: SubmitResult,
+): OptionRevealRole | null {
+  if (optionId === result.selectedOptionId && !result.correct) {
+    return 'wrong-pick';
+  }
+  if (optionId === result.correctOptionId) return 'correct';
+  if (optionId === result.trapOptionId) return 'trap';
+  return null;
+}
+
+function getOptionVerdictLabel(
+  role: OptionRevealRole,
+  optionId: string,
+  result: SubmitResult,
+  optionMarks: Marks,
+): string {
+  switch (role) {
+    case 'wrong-pick':
+      return 'Your answer · Incorrect';
+    case 'correct': {
+      if (optionMarks[optionId] === 'eliminated') {
+        return 'Correct answer · you eliminated it';
+      }
+      if (
+        result.secondChoiceWasCorrect &&
+        optionMarks[optionId] === 'maybe'
+      ) {
+        return 'Correct answer · your second choice';
+      }
+      if (result.selectedOptionId === optionId) {
+        return 'Correct answer · your answer';
+      }
+      return 'Correct answer';
+    }
+    case 'trap': {
+      if (optionMarks[optionId] === 'maybe') {
+        return 'Trap · you marked maybe';
+      }
+      if (optionMarks[optionId] === 'eliminated') {
+        return 'Trap · you eliminated it';
+      }
+      if (optionMarks[optionId] === 'selected') {
+        return 'Trap · you selected it';
+      }
+      return 'Trap';
+    }
+  }
+}
+
+function getDisclosureLabel(role: OptionRevealRole): string {
+  switch (role) {
+    case 'trap':
+      return 'Why is this a trap?';
+    case 'wrong-pick':
+      return "Why isn't this right?";
+    case 'correct':
+      return 'Why is this actually right?';
+  }
+}
+
+/** Disclosure copy follows objective option type (e.g. trap) even when badge is wrong-pick. */
+function getDisclosureRole(
+  revealRole: OptionRevealRole,
+  optionId: string,
+  result: SubmitResult,
+): OptionRevealRole {
+  if (revealRole === 'wrong-pick' && optionId === result.trapOptionId) {
+    return 'trap';
+  }
+  return revealRole;
+}
+
+/** Badge emphasis when objective type and student outcome disagree. */
+function verdictWarns(
+  revealRole: OptionRevealRole,
+  optionId: string,
+  result: SubmitResult,
+  optionMarks: Marks,
+): boolean {
+  const outcome = getOptionOutcome(optionId, result, optionMarks);
+  if (revealRole === 'correct' && outcome === 'mistake') return true;
+  if (revealRole === 'trap' && outcome === 'mistake') return true;
+  return false;
+}
+
+function analysisBodyForOption(optionId: string, result: SubmitResult): string | null {
+  const { analyses } = splitExplanation(result.explanation);
+  const match = analyses.find((a) => a.heading.includes(`(${optionId})`));
+  return match?.body ?? null;
+}
+
+function OptionDisclosureContent({
+  role,
+  optionId,
+  result,
+}: {
+  role: OptionRevealRole;
+  optionId: string;
+  result: SubmitResult;
+}) {
+  if (role === 'trap') {
+    const correctRationale = result.explanation.find((part) =>
+      part.startsWith('Correct-answer reasoning'),
+    );
+    return (
+      <div className="option-disclosure-content">
+        <p className="option-disclosure-kicker">Why it&apos;s tempting</p>
+        <p>{result.trapExplanation.whyTempting}</p>
+        <p className="option-disclosure-kicker">Why it&apos;s wrong</p>
+        <p>{result.trapExplanation.whyWrong}</p>
+        {correctRationale && (
+          <>
+            <p className="option-disclosure-kicker">The right answer</p>
+            <p>
+              {correctRationale.replace(/^Correct-answer reasoning \([A-D]\):\s*/, '')}
+            </p>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  const body = analysisBodyForOption(optionId, result);
+  return (
+    <div className="option-disclosure-content">
+      <p>{body ?? 'No additional detail for this choice.'}</p>
+    </div>
+  );
+}
+
 function ChoiceLetter({
   id,
   tone,
@@ -69,7 +234,13 @@ function ChoiceLetter({
   return <span className={`choice-letter choice-letter-${tone}`}>{id}</span>;
 }
 
-function ResultFeedback({ result }: { result: SubmitResult }) {
+function ResultFeedback({
+  result,
+  showAnalysisBlocks = true,
+}: {
+  result: SubmitResult;
+  showAnalysisBlocks?: boolean;
+}) {
   const { summary, analyses } = splitExplanation(result.explanation);
   const pickedTone = result.correct ? 'correct' : 'wrong';
 
@@ -90,7 +261,7 @@ function ResultFeedback({ result }: { result: SubmitResult }) {
         <p className="result-note">Your second choice was the correct answer.</p>
       )}
       {summary && <p className="diagnostic-summary">{summary}</p>}
-      {analyses.length > 0 && (
+      {showAnalysisBlocks && analyses.length > 0 && (
         <div className="analysis-blocks">
           {analyses.map((analysis) => {
             const isCorrect = analysis.heading.toLowerCase().startsWith('correct-answer');
@@ -112,42 +283,6 @@ function ResultFeedback({ result }: { result: SubmitResult }) {
   );
 }
 
-function TrapExplanationPanel({
-  result,
-  panelRef,
-}: {
-  result: SubmitResult;
-  panelRef: RefObject<HTMLElement | null>;
-}) {
-  const correctRationale = result.explanation.find((part) =>
-    part.startsWith('Correct-answer reasoning'),
-  );
-
-  return (
-    <article ref={panelRef} className="trap-explanation-panel">
-      <h2 className="trap-panel-title">Why is this a trap?</h2>
-      <div className="trap-blocks">
-        <div className="trap-block why-tempting">
-          <p className="trap-kicker">Why it's tempting</p>
-          <p>{result.trapExplanation.whyTempting}</p>
-        </div>
-        <div className="trap-block why-wrong">
-          <p className="trap-kicker">Why it's wrong</p>
-          <p>{result.trapExplanation.whyWrong}</p>
-        </div>
-      </div>
-      {correctRationale && (
-        <div className="trap-block trap-vs-correct">
-          <p className="trap-kicker">The right answer</p>
-          <p>
-            {correctRationale.replace(/^Correct-answer reasoning \([A-D]\):\s*/, '')}
-          </p>
-        </div>
-      )}
-    </article>
-  );
-}
-
 type View = 'quiz' | 'summary';
 
 export default function App() {
@@ -160,22 +295,14 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [view, setView] = useState<View>('quiz');
-  const [trapExplanationOpen, setTrapExplanationOpen] = useState<Record<string, boolean>>({});
+  const [disclosureOpen, setDisclosureOpen] = useState<Record<string, boolean>>({});
   const resultRef = useRef<HTMLElement>(null);
-  const trapPanelRef = useRef<HTMLElement>(null);
-  const pendingTrapScroll = useRef(false);
 
   useEffect(() => {
     fetchQuestions()
       .then(setQuestions)
       .catch((e: Error) => setError(e.message));
   }, []);
-
-  useEffect(() => {
-    if (!pendingTrapScroll.current) return;
-    trapPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    pendingTrapScroll.current = false;
-  }, [trapExplanationOpen]);
 
   if (error && !questions) return <main className="page"><p className="error">{error}</p></main>;
   if (!questions) return <main className="page"><p>Loading…</p></main>;
@@ -219,19 +346,17 @@ export default function App() {
     setIndex(nextIndex);
   }
 
-  function revealTrapExplanation() {
-    if (trapExplanationOpen[question.id]) {
-      trapPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      return;
-    }
-    pendingTrapScroll.current = true;
-    setTrapExplanationOpen((prev) => ({ ...prev, [question.id]: true }));
+  function toggleDisclosure(optionId: string) {
+    const key = `${question.id}:${optionId}`;
+    setDisclosureOpen((prev) => ({ ...prev, [key]: !prev[key] }));
   }
 
   if (view === 'summary') {
     return (
       <main className="page">
-        <h1>SAT English</h1>
+        <div className="app-header">
+          <div className="eyebrow">SAT English <span>· Reading & Writing</span></div>
+        </div>
         <h2 className="summary-heading">Results</h2>
         <p className="summary-score">
           {Object.values(resultsByQuestion).filter((r) => r.correct).length} / {questions.length} correct
@@ -269,71 +394,144 @@ export default function App() {
 
   return (
     <main className="page">
-      <h1>SAT English</h1>
+      <div className="app-header">
+        <div>
+          <div className="eyebrow">SAT English <span>· Reading & Writing</span></div>
+          <div className="scantron" aria-label={`Progress: question ${index + 1} of ${questions.length}`}>
+            {questions.map((q, i) => {
+              const qResult = resultsByQuestion[q.id];
+              let bubbleClass = '';
+              if (i === index) bubbleClass = 'current';
+              else if (qResult?.correct) bubbleClass = 'filled-correct';
+              else if (qResult && !qResult.correct) bubbleClass = 'filled-incorrect';
+              return (
+                <div
+                  key={q.id}
+                  className={`bubble ${bubbleClass}`}
+                  title={`Question ${i + 1}${i === index ? ' — current' : ''}`}
+                />
+              );
+            })}
+          </div>
+        </div>
+      </div>
       <p className="progress">
         Question {index + 1} of {questions.length}
       </p>
 
-      {question.passage && <p className="passage">{question.passage}</p>}
+      {question.passage && <p className="passage card">{question.passage}</p>}
       <p className="prompt">{question.prompt}</p>
 
-      <ul className="options">
+      <ul className={`options${result ? ' options-post-submit' : ''}`}>
         {question.options.map((option) => {
           const mark = marks[option.id];
+          const revealRole = result
+            ? getOptionRevealRole(option.id, result)
+            : null;
+          const disclosureKey = `${question.id}:${option.id}`;
+          const isDisclosureOpen = Boolean(disclosureOpen[disclosureKey]);
+          const disclosureRole =
+            revealRole && result
+              ? getDisclosureRole(revealRole, option.id, result)
+              : null;
+          const cardTypeClass = result
+            ? revealRole
+              ? `option-type-${revealRole}`
+              : 'option-type-neutral'
+            : '';
+
           return (
             <li
               key={option.id}
               className={[
                 'option',
-                mark,
-                result && option.id === result.correctOptionId ? 'revealed-correct' : '',
-                result && option.id === result.selectedOptionId && !result.correct
-                  ? 'revealed-wrong'
-                  : '',
+                result ? '' : mark,
+                result ? 'option-post-submit' : '',
+                cardTypeClass,
               ]
                 .filter(Boolean)
                 .join(' ')}
               data-option={option.id}
             >
-              <div className="option-text">
-                <span className="option-id">{option.id}</span>
-                <span>{option.text}</span>
-                {result && option.id === result.correctOptionId && (
-                  <span className="pill pill-correct">Correct</span>
-                )}
-                {result && option.id === result.trapOptionId && (
-                  <button
-                    type="button"
-                    className="pill pill-trap"
-                    onClick={revealTrapExplanation}
-                  >
-                    Trap
-                  </button>
-                )}
-              </div>
-              {result && option.id === result.trapOptionId && (
-                <button
-                  type="button"
-                  className="trap-toggle"
-                  onClick={revealTrapExplanation}
-                >
-                  Why is this a trap?
-                </button>
+              {result ? (
+                <div className="option-stack">
+                  <div className="option-main">
+                    <span className="option-id">{option.id}</span>
+                    <span className="option-copy">{option.text}</span>
+                  </div>
+                  {revealRole && (
+                    <span
+                      className={[
+                        'option-verdict',
+                        verdictWarns(revealRole, option.id, result, marks)
+                          ? 'option-verdict-warn'
+                          : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
+                    >
+                      {getOptionVerdictLabel(revealRole, option.id, result, marks)}
+                    </span>
+                  )}
+                  {revealRole && (
+                    <>
+                      <button
+                        type="button"
+                        className={`option-disclosure option-disclosure-${disclosureRole}`}
+                        aria-expanded={isDisclosureOpen}
+                        onClick={() => toggleDisclosure(option.id)}
+                      >
+                        <span>{getDisclosureLabel(disclosureRole!)}</span>
+                        <span className="option-disclosure-chevron" aria-hidden>
+                          ▼
+                        </span>
+                      </button>
+                      {isDisclosureOpen && disclosureRole && (
+                        <OptionDisclosureContent
+                          role={disclosureRole}
+                          optionId={option.id}
+                          result={result}
+                        />
+                      )}
+                    </>
+                  )}
+                  <div className="marks">
+                    {(Object.keys(MARK_LABELS) as Mark[]).map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        data-mark={m}
+                        className={mark === m ? 'mark active' : 'mark'}
+                        disabled={result !== null}
+                        onClick={() => setMarksForCurrent(applyMark(marks, option.id, m))}
+                      >
+                        {MARK_LABELS[m]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="option-text">
+                    <span className="option-id">{option.id}</span>
+                    <span className="option-copy">{option.text}</span>
+                  </div>
+                  <div className="marks">
+                    {(Object.keys(MARK_LABELS) as Mark[]).map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        data-mark={m}
+                        className={mark === m ? 'mark active' : 'mark'}
+                        disabled={result !== null}
+                        onClick={() => setMarksForCurrent(applyMark(marks, option.id, m))}
+                      >
+                        {MARK_LABELS[m]}
+                      </button>
+                    ))}
+                  </div>
+                </>
               )}
-              <div className="marks">
-                {(Object.keys(MARK_LABELS) as Mark[]).map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    data-mark={m}
-                    className={mark === m ? 'mark active' : 'mark'}
-                    disabled={result !== null}
-                    onClick={() => setMarksForCurrent(applyMark(marks, option.id, m))}
-                  >
-                    {MARK_LABELS[m]}
-                  </button>
-                ))}
-              </div>
             </li>
           );
         })}
@@ -360,13 +558,9 @@ export default function App() {
         >
           <div className="result-bar" aria-hidden="true" />
           <div className="result-body">
-            <ResultFeedback result={result} />
+            <ResultFeedback result={result} showAnalysisBlocks={false} />
           </div>
         </section>
-      )}
-
-      {result && trapExplanationOpen[question.id] && (
-        <TrapExplanationPanel result={result} panelRef={trapPanelRef} />
       )}
 
       <nav className="pager">
