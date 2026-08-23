@@ -1,12 +1,13 @@
 # ScoreBetter
 
-Minimal SAT prep scaffold: one hardcoded English question, per-option marking,
-and server-side answer checking. No database, no auth, no AI yet.
+SAT Reading & Writing practice: multi-question quiz flow, per-option marking
+(Answer / Maybe / Eliminate), diagnostic labels, and server-side answer checking.
+No database, no auth, no AI yet.
 
 ## Structure
 
 ```
-backend/    NestJS API (hardcoded questions, answer checking)
+backend/    NestJS API (in-memory question bank, answer checking)
 frontend/   React + Vite UI
 ```
 
@@ -21,14 +22,22 @@ cd frontend && npm install && npm run dev   # http://localhost:5173
 
 ## API
 
-- `GET  /api/question` — the current question. Omits the correct answer.
-- `POST /api/submit` — `{ questionId, selectedOptionId, secondChoiceOptionId, eliminatedOptionIds }`
-  returns `{ correct, correctOptionId, selectedOptionId, secondChoiceWasCorrect, label, explanation }`.
+- `GET  /api/questions` — all questions for the quiz UI. Omits correct answers, rankings, and authored analysis.
+- `GET  /api/question` — the first question in the bank (same shape as one element of `/api/questions`).
+- `POST /api/submit` — body: `{ questionId, selectedOptionId, secondChoiceOptionId, eliminatedOptionIds }`.
+  Returns `{ correct, correctOptionId, trapOptionId, selectedOptionId, secondChoiceWasCorrect, label, explanation, trapExplanation }`.
 
-The authored option ranking lives only in
-`backend/src/questions/sat-reading-writing.questions.ts` and is never sent to
-the client before submission. Rank 1 is the correct answer; rank 2 is the
-authored primary trap.
+Authored option rankings and per-option analysis live on the server only and are
+never sent to the client before submission. Rank 1 is the correct answer; rank 2
+is the authored primary trap.
+
+### Question bank
+
+- **Public repo:** [backend/src/questions/sat-reading-writing.questions.ts](backend/src/questions/sat-reading-writing.questions.ts) exports original ScoreBetter practice items only.
+- **Private deploy (optional):** add a local file
+  `backend/src/questions/sat-reading-writing.questions.official.ts` (gitignored)
+  exporting `OFFICIAL_QUESTIONS`. When present, those items are prepended to the
+  bank; when absent, the app runs on originals only.
 
 ## Marking rules
 
@@ -37,6 +46,10 @@ Maybe are exclusive — assigning either moves it off whichever option held it.
 Clicking an option's current mark clears it. Submit requires an Answer.
 
 ## Tests
+
+```bash
+cd backend  && npm test              # unit tests (diagnostic classifier, submit)
+```
 
 With both servers running:
 
@@ -47,4 +60,4 @@ cd frontend && npm run e2e:open   # interactive
 
 ## Next steps
 
-Persistence, more questions, auth, AI explanations.
+Persistence, auth, AI explanations, and expanding the original practice bank.
