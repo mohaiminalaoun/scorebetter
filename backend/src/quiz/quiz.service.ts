@@ -12,6 +12,9 @@ import {
 import {
   buildDiagnosticExplanation,
   classifyMarks,
+  getAvailableComparisons,
+  getComparisonSide,
+  getOptionAnalysisFor,
 } from './diagnostic-classifier';
 import type { PublicQuestionDto } from './dto/public-question.dto';
 import type { SubmitAnswerDto } from './dto/submit-answer.dto';
@@ -43,15 +46,7 @@ export class QuizService {
     const correctOptionId = question.optionRanking[0];
     const trapOptionId = question.optionRanking[1];
     const label = classifyMarks(dto, question.optionRanking);
-
-    const trapAnalysis = question.optionAnalysis.find(
-      (a) => a.optionId === trapOptionId,
-    );
-    if (!trapAnalysis) {
-      throw new Error(
-        `Incomplete option analysis for question: ${question.id}`,
-      );
-    }
+    const trapAnalysis = getOptionAnalysisFor(question, trapOptionId);
 
     return {
       correct: dto.selectedOptionId === correctOptionId,
@@ -66,6 +61,10 @@ export class QuizService {
         whyTempting: trapAnalysis.likelyReasoning,
         whyWrong: trapAnalysis.rationale,
       },
+      optionAnalyses: question.options.map((option) =>
+        getComparisonSide(question, dto, option.id),
+      ),
+      availableComparisons: getAvailableComparisons(label, question, dto),
     };
   }
 

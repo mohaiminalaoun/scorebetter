@@ -2,7 +2,14 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { BadRequestException } from '@nestjs/common';
 import { getFirstQuestion } from '../questions/questions.repository';
-import { classifyMarks, type DiagnosticLabel } from './diagnostic-classifier';
+import {
+  classifyMarks,
+  getAvailableComparisons,
+  getComparison,
+  getOptionAnalysisFor,
+  type DiagnosticLabel,
+  type Marks,
+} from './diagnostic-classifier';
 import { QuizService } from './quiz.service';
 
 const ranking: [string, string, string, string] = ['A', 'B', 'C', 'D'];
@@ -228,5 +235,89 @@ test('submit returns trap explanation with whyTempting and whyWrong', () => {
   assert.equal(result.trapExplanation.optionId, question.optionRanking[1]);
   assert.ok(result.trapExplanation.whyTempting.length > 0);
   assert.ok(result.trapExplanation.whyWrong.length > 0);
+});
+
+test('getOptionAnalysisFor returns the rationale and option text for a given option', () => {
+  const question = getFirstQuestion();
+  const correctOptionId = question.optionRanking[0];
+
+  const view = getOptionAnalysisFor(question, correctOptionId);
+
+  assert.equal(view.optionId, correctOptionId);
+  assert.equal(
+    view.optionText,
+    question.options.find((o) => o.id === correctOptionId)?.text,
+  );
+  assert.equal(view.classification, 'correct');
+  assert.ok(view.rationale.length > 0);
+  assert.ok(view.likelyReasoning.length > 0);
+});
+
+test('getComparison returns both sides with roles relative to the marks', () => {
+  const question = getFirstQuestion();
+  const [correctOptionId, trapOptionId] = question.optionRanking;
+  const marks: Marks = { selectedOptionId: correctOptionId, secondChoiceOptionId: trapOptionId };
+
+  const { a, b } = getComparison(question, marks, correctOptionId, trapOptionId);
+
+  assert.equal(a.optionId, correctOptionId);
+  assert.equal(a.role, 'correct');
+  assert.equal(b.optionId, trapOptionId);
+  assert.equal(b.role, 'trap');
+});
+
+const EXPECTED_COMPARISON_COUNTS: Record<DiagnosticLabel, number> = {
+  'crystal-clear': 1,
+  'some-confusion': 1,
+  'confused-sensed-truth': 1,
+  'fooled-dismissed-truth': 1,
+  'fooled-blind-spot': 1,
+  'blind-spot-on-correct': 2,
+  'dismissed-truth-entirely': 2,
+  'doubted-truth': 1,
+  lost: 1,
+};
+
+const fakeQuestion = {
+  optionRanking: ranking,
+  options: ranking.map((id) => ({ id, text: `Option ${id}` })),
+} as unknown as Parameters<typeof getAvailableComparisons>[1];
+
+for (const testCase of cases) {
+  test(`getAvailableComparisons produces the expected button set for ${testCase.expected}`, () => {
+    const comparisons = getAvailableComparisons(testCase.expected, fakeQuestion, testCase.marks);
+
+    assert.equal(comparisons.length, EXPECTED_COMPARISON_COUNTS[testCase.expected]);
+    for (const comparison of comparisons) {
+      assert.ok(ranking.includes(comparison.optionIdA));
+      assert.ok(ranking.includes(comparison.optionIdB));
+      assert.notEqual(comparison.optionIdA, comparison.optionIdB);
+      assert.ok(comparison.buttonLabel.length > 0);
+    }
+  });
+}
+
+test('getAvailableComparisons flags dismissed-truth-entirely and fooled-dismissed-truth as eliminated framing', () => {
+  const dismissedTruthEntirely = getAvailableComparisons(
+    'dismissed-truth-entirely',
+    fakeQuestion,
+    { selectedOptionId: 'C', secondChoiceOptionId: 'B', eliminatedOptionIds: ['A'] },
+  );
+  assert.ok(dismissedTruthEntirely.some((c) => c.framing === 'eliminated'));
+
+  const fooledDismissedTruth = getAvailableComparisons('fooled-dismissed-truth', fakeQuestion, {
+    selectedOptionId: 'B',
+    secondChoiceOptionId: 'C',
+    eliminatedOptionIds: ['A'],
+  });
+  assert.equal(fooledDismissedTruth[0].framing, 'eliminated');
+});
+
+test('getAvailableComparisons flags crystal-clear as reinforcement framing', () => {
+  const comparisons = getAvailableComparisons('crystal-clear', fakeQuestion, {
+    selectedOptionId: 'A',
+    secondChoiceOptionId: 'B',
+  });
+  assert.equal(comparisons[0].framing, 'reinforcement');
 });
 

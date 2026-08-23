@@ -1,6 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { fetchQuestions, submitAnswer } from './api';
-import type { DiagnosticLabel, Mark, Marks, Question, SubmitResult } from './types';
+import type {
+  ComparisonOption,
+  ComparisonSide,
+  DiagnosticLabel,
+  Mark,
+  Marks,
+  Question,
+  SubmitResult,
+} from './types';
 
 const MARK_LABELS: Record<Mark, string> = {
   selected: 'Answer',
@@ -179,10 +187,8 @@ function verdictWarns(
   return false;
 }
 
-function analysisBodyForOption(optionId: string, result: SubmitResult): string | null {
-  const { analyses } = splitExplanation(result.explanation);
-  const match = analyses.find((a) => a.heading.includes(`(${optionId})`));
-  return match?.body ?? null;
+function analysisFor(optionId: string, result: SubmitResult): ComparisonSide | undefined {
+  return result.optionAnalyses.find((a) => a.optionId === optionId);
 }
 
 function OptionDisclosureContent({
@@ -195,31 +201,94 @@ function OptionDisclosureContent({
   result: SubmitResult;
 }) {
   if (role === 'trap') {
-    const correctRationale = result.explanation.find((part) =>
-      part.startsWith('Correct-answer reasoning'),
-    );
+    const correctAnalysis = analysisFor(result.correctOptionId, result);
     return (
       <div className="option-disclosure-content">
         <p className="option-disclosure-kicker">Why it&apos;s tempting</p>
         <p>{result.trapExplanation.whyTempting}</p>
         <p className="option-disclosure-kicker">Why it&apos;s wrong</p>
         <p>{result.trapExplanation.whyWrong}</p>
-        {correctRationale && (
+        {correctAnalysis && (
           <>
             <p className="option-disclosure-kicker">The right answer</p>
-            <p>
-              {correctRationale.replace(/^Correct-answer reasoning \([A-D]\):\s*/, '')}
-            </p>
+            <p>{correctAnalysis.rationale}</p>
           </>
         )}
       </div>
     );
   }
 
-  const body = analysisBodyForOption(optionId, result);
+  const analysis = analysisFor(optionId, result);
   return (
     <div className="option-disclosure-content">
-      <p>{body ?? 'No additional detail for this choice.'}</p>
+      <p>{analysis?.rationale ?? 'No additional detail for this choice.'}</p>
+    </div>
+  );
+}
+
+function ComparisonPanel({
+  comparison,
+  result,
+}: {
+  comparison: ComparisonOption;
+  result: SubmitResult;
+}) {
+  const a = analysisFor(comparison.optionIdA, result);
+  const b = analysisFor(comparison.optionIdB, result);
+  if (!a || !b) return null;
+
+  return (
+    <div className="comparison-panel">
+      <div className="comparison-side">
+        <p className="comparison-side-head">
+          <ChoiceLetter id={a.optionId} tone={a.role === 'correct' ? 'correct' : 'wrong'} />
+          <span>{a.optionText}</span>
+        </p>
+        <p>{a.rationale}</p>
+      </div>
+      <div className="comparison-side">
+        <p className="comparison-side-head">
+          <ChoiceLetter id={b.optionId} tone={b.role === 'correct' ? 'correct' : 'wrong'} />
+          <span>{b.optionText}</span>
+        </p>
+        <p>{b.rationale}</p>
+      </div>
+    </div>
+  );
+}
+
+function ComparisonRow({
+  result,
+  openId,
+  onToggle,
+}: {
+  result: SubmitResult;
+  openId: string | null;
+  onToggle: (id: string) => void;
+}) {
+  const { availableComparisons } = result;
+  if (availableComparisons.length === 0) return null;
+
+  const active = availableComparisons.find((c) => c.id === openId) ?? null;
+
+  return (
+    <div className="comparison-row">
+      <div className="comparison-buttons">
+        {availableComparisons.map((comparison) => (
+          <button
+            key={comparison.id}
+            type="button"
+            className={`comparison-button comparison-framing-${comparison.framing}${
+              openId === comparison.id ? ' active' : ''
+            }`}
+            aria-expanded={openId === comparison.id}
+            onClick={() => onToggle(comparison.id)}
+          >
+            {comparison.buttonLabel}
+          </button>
+        ))}
+      </div>
+      {active && <ComparisonPanel comparison={active} result={result} />}
     </div>
   );
 }
@@ -296,6 +365,9 @@ export default function App() {
   const [submitting, setSubmitting] = useState(false);
   const [view, setView] = useState<View>('quiz');
   const [disclosureOpen, setDisclosureOpen] = useState<Record<string, boolean>>({});
+  const [comparisonOpenByQuestion, setComparisonOpenByQuestion] = useState<
+    Record<string, string | null>
+  >({});
   const resultRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -349,6 +421,13 @@ export default function App() {
   function toggleDisclosure(optionId: string) {
     const key = `${question.id}:${optionId}`;
     setDisclosureOpen((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
+
+  function toggleComparison(comparisonId: string) {
+    setComparisonOpenByQuestion((prev) => ({
+      ...prev,
+      [question.id]: prev[question.id] === comparisonId ? null : comparisonId,
+    }));
   }
 
   if (view === 'summary') {
@@ -559,6 +638,11 @@ export default function App() {
           <div className="result-bar" aria-hidden="true" />
           <div className="result-body">
             <ResultFeedback result={result} showAnalysisBlocks={false} />
+            <ComparisonRow
+              result={result}
+              openId={comparisonOpenByQuestion[question.id] ?? null}
+              onToggle={toggleComparison}
+            />
           </div>
         </section>
       )}

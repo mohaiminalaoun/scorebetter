@@ -27,6 +27,39 @@ export type DiagnosticLabel =
   | 'doubted-truth'
   | 'lost';
 
+export type OptionClassification =
+  | 'correct'
+  | 'primary-trap'
+  | 'secondary-distractor'
+  | 'weak-distractor';
+
+export type ComparisonRole =
+  | 'correct'
+  | 'trap'
+  | 'selected'
+  | 'second-choice'
+  | 'eliminated'
+  | 'other';
+
+export type ComparisonSide = {
+  optionId: string;
+  optionText: string;
+  rationale: string;
+  likelyReasoning: string;
+  classification: OptionClassification;
+  role: ComparisonRole;
+};
+
+export type ComparisonFraming = 'standard' | 'eliminated' | 'reinforcement';
+
+export type ComparisonOption = {
+  id: string;
+  buttonLabel: string;
+  optionIdA: string;
+  optionIdB: string;
+  framing: ComparisonFraming;
+};
+
 export type SubmitResult = {
   correct: boolean;
   correctOptionId: string;
@@ -40,6 +73,8 @@ export type SubmitResult = {
     whyTempting: string;
     whyWrong: string;
   };
+  optionAnalyses: ComparisonSide[];
+  availableComparisons: ComparisonOption[];
 };
 
 export type SubmitAnswerPayload = {
