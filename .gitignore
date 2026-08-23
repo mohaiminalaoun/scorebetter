@@ -4,3 +4,4 @@ dist/
 cypress/screenshots/
 cypress/videos/
 plans/
+backend/src/questions/sat-reading-writing.questions.official.ts
