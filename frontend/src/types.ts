@@ -66,6 +66,7 @@ export type SubmitResult = {
   trapOptionId: string;
   selectedOptionId: string;
   secondChoiceWasCorrect: boolean;
+  secondChoiceWasTrap: boolean;
   label: DiagnosticLabel;
   explanation: string[];
   trapExplanation: {

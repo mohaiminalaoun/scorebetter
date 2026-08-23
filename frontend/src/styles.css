@@ -828,6 +828,40 @@ button.pill {
   background: var(--accent-soft);
 }
 
+/* ---------- Stats Page ---------- */
+.stats-list {
+  list-style: none;
+  margin: 0 0 24px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.stats-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.stats-value {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.stats-label {
+  color: var(--ink);
+  opacity: 0.8;
+}
+
 /* ---------- Trap Explanation Panel ---------- */
 .trap-explanation-panel {
   margin-top: 18px;

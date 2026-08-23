@@ -352,7 +352,27 @@ function ResultFeedback({
   );
 }
 
-type View = 'quiz' | 'summary';
+type View = 'quiz' | 'stats' | 'summary';
+
+type QuizStats = {
+  answeredCount: number;
+  correctCount: number;
+  trapIdentifiedCount: number;
+  trapPickedCount: number;
+  distractorPickedCount: number;
+};
+
+function computeQuizStats(results: SubmitResult[]): QuizStats {
+  return {
+    answeredCount: results.length,
+    correctCount: results.filter((r) => r.correct).length,
+    trapIdentifiedCount: results.filter((r) => r.secondChoiceWasTrap).length,
+    trapPickedCount: results.filter((r) => r.selectedOptionId === r.trapOptionId).length,
+    distractorPickedCount: results.filter(
+      (r) => r.selectedOptionId !== r.correctOptionId && r.selectedOptionId !== r.trapOptionId,
+    ).length,
+  };
+}
 
 export default function App() {
   const [questions, setQuestions] = useState<Question[] | null>(null);
@@ -428,6 +448,46 @@ export default function App() {
       ...prev,
       [question.id]: prev[question.id] === comparisonId ? null : comparisonId,
     }));
+  }
+
+  if (view === 'stats') {
+    const results = Object.values(resultsByQuestion);
+    const stats = computeQuizStats(results);
+
+    return (
+      <main className="page">
+        <div className="app-header">
+          <div className="eyebrow">SAT English <span>· Reading & Writing</span></div>
+        </div>
+        <h2 className="summary-heading">Results</h2>
+        <p className="summary-score">
+          {stats.correctCount} / {questions.length} correct
+        </p>
+
+        <ul className="stats-list">
+          <li>
+            <span className="stats-value">{stats.correctCount} / {stats.answeredCount}</span>
+            <span className="stats-label">Correctly identified the right answer</span>
+          </li>
+          <li>
+            <span className="stats-value">{stats.trapIdentifiedCount} / {stats.answeredCount}</span>
+            <span className="stats-label">Correctly identified the trap (as second choice)</span>
+          </li>
+          <li>
+            <span className="stats-value">{stats.trapPickedCount} / {stats.answeredCount}</span>
+            <span className="stats-label">Picked the trap as their final answer</span>
+          </li>
+          <li>
+            <span className="stats-value">{stats.distractorPickedCount} / {stats.answeredCount}</span>
+            <span className="stats-label">Picked one of the other distractors as their final answer</span>
+          </li>
+        </ul>
+
+        <button type="button" onClick={() => setView('summary')}>
+          View question-by-question breakdown
+        </button>
+      </main>
+    );
   }
 
   if (view === 'summary') {
@@ -662,7 +722,7 @@ export default function App() {
             type="button"
             data-testid="finish"
             className="submit"
-            onClick={() => setView('summary')}
+            onClick={() => setView('stats')}
           >
             See results
           </button>

@@ -54,6 +54,7 @@ export class QuizService {
       trapOptionId,
       selectedOptionId: dto.selectedOptionId,
       secondChoiceWasCorrect: dto.secondChoiceOptionId === correctOptionId,
+      secondChoiceWasTrap: dto.secondChoiceOptionId === trapOptionId,
       label,
       explanation: buildDiagnosticExplanation(label, question, dto),
       trapExplanation: {
