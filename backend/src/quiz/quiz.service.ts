@@ -3,7 +3,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import type { Question } from '../questions/question.model';
+import type { GradableQuestion } from '../questions/question.model';
+import { validateAuthoredQuestion } from '../questions/authored-question-validation';
 import {
   findQuestion,
   getAllQuestions as getAllQuestionsFromRepo,
@@ -36,9 +37,14 @@ export class QuizService {
   }
 
   submit(dto: SubmitAnswerDto): SubmitAnswerResultDto {
-    const question = findQuestion(dto.questionId);
+    let question: GradableQuestion | undefined = findQuestion(dto.questionId);
+
+    // If not in bank, try to use the client-provided authored question
     if (!question) {
-      throw new NotFoundException(`Unknown question: ${dto.questionId}`);
+      if (!dto.authoredQuestion) {
+        throw new NotFoundException(`Unknown question: ${dto.questionId}`);
+      }
+      question = this.toGradableQuestion(dto.authoredQuestion, dto.questionId);
     }
 
     this.validateMarks(dto, question);
@@ -69,7 +75,30 @@ export class QuizService {
     };
   }
 
-  private validateMarks(dto: SubmitAnswerDto, question: Question): void {
+  private toGradableQuestion(
+    authored: unknown,
+    expectedQuestionId: string,
+  ): GradableQuestion {
+    let question: GradableQuestion;
+    try {
+      question = validateAuthoredQuestion(authored);
+    } catch (error) {
+      throw new BadRequestException(
+        `authoredQuestion ${(error as Error).message}`,
+      );
+    }
+    if (question.id !== expectedQuestionId) {
+      throw new BadRequestException(
+        'authoredQuestion.id must match questionId',
+      );
+    }
+    return question;
+  }
+
+  private validateMarks(
+    dto: SubmitAnswerDto,
+    question: GradableQuestion,
+  ): void {
     if (typeof dto.selectedOptionId !== 'string') {
       throw new BadRequestException('selectedOptionId must be a string');
     }

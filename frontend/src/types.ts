@@ -10,6 +10,12 @@ export type Question = {
   options: Option[];
 };
 
+export type ReadingWritingDomain =
+  | 'Information and Ideas'
+  | 'Craft and Structure'
+  | 'Expression of Ideas'
+  | 'Standard English Conventions';
+
 /** How the user has marked a single option. */
 export type Mark = 'selected' | 'maybe' | 'eliminated';
 
@@ -32,6 +38,26 @@ export type OptionClassification =
   | 'primary-trap'
   | 'secondary-distractor'
   | 'weak-distractor';
+
+export type AuthoredOptionAnalysis = {
+  optionId: string;
+  rank: 1 | 2 | 3 | 4;
+  classification: OptionClassification;
+  rationale: string;
+  likelyReasoning: string;
+};
+
+export type AuthoredQuestion = Question & {
+  domain: ReadingWritingDomain;
+  skill: string;
+  optionRanking: [string, string, string, string];
+  optionAnalysis: [
+    AuthoredOptionAnalysis,
+    AuthoredOptionAnalysis,
+    AuthoredOptionAnalysis,
+    AuthoredOptionAnalysis,
+  ];
+};
 
 export type ComparisonRole =
   | 'correct'
@@ -83,4 +109,5 @@ export type SubmitAnswerPayload = {
   selectedOptionId: string;
   secondChoiceOptionId: string | null;
   eliminatedOptionIds: string[];
+  authoredQuestion?: AuthoredQuestion;
 };

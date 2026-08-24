@@ -7,8 +7,18 @@ import type {
   Mark,
   Marks,
   Question,
+  SubmitAnswerPayload,
   SubmitResult,
 } from './types';
+import {
+  findQuestionIdConflicts,
+  loadImportedQuestions,
+  saveImportedQuestions,
+  clearImportedQuestions,
+  parseImportedJSON,
+  toPublicQuestion,
+  type FullQuestion,
+} from './imported-questions';
 
 const MARK_LABELS: Record<Mark, string> = {
   selected: 'Answer',
@@ -374,8 +384,93 @@ function computeQuizStats(results: SubmitResult[]): QuizStats {
   };
 }
 
+function ImportControl({
+  importedCount,
+  importError,
+  onImport,
+  onClear,
+}: {
+  importedCount: number;
+  importError: string | null;
+  onImport: (file: File) => void;
+  onClear: () => void;
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      onImport(file);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  return (
+    <div style={{ padding: '12px 0', borderBottom: '1px solid #ccc', marginBottom: '12px' }}>
+      {importedCount > 0 ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <span style={{ fontSize: '14px', color: '#666' }}>
+            ✓ {importedCount} extra question{importedCount === 1 ? '' : 's'} loaded
+          </span>
+          <button
+            type="button"
+            data-testid="clear-import"
+            onClick={onClear}
+            style={{
+              padding: '4px 8px',
+              fontSize: '12px',
+              background: '#f0f0f0',
+              border: '1px solid #ccc',
+              borderRadius: '4px',
+              cursor: 'pointer',
+            }}
+          >
+            Clear import
+          </button>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <label
+            style={{
+              padding: '4px 8px',
+              fontSize: '12px',
+              background: '#0066cc',
+              color: 'white',
+              borderRadius: '4px',
+              cursor: 'pointer',
+            }}
+          >
+            Import JSON
+            <input
+              ref={fileInputRef}
+              type="file"
+              data-testid="import-input"
+              accept=".json"
+              onChange={handleFileChange}
+              style={{ display: 'none' }}
+            />
+          </label>
+          <span style={{ fontSize: '12px', color: '#999' }}>
+            Add your custom questions
+          </span>
+        </div>
+      )}
+      {importError && (
+        <p style={{ fontSize: '12px', color: '#cc0000', margin: '8px 0 0 0' }}>
+          Error: {importError}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export default function App() {
   const [questions, setQuestions] = useState<Question[] | null>(null);
+  const [bankQuestions, setBankQuestions] = useState<Question[]>([]);
+  const [importedQuestionsMap, setImportedQuestionsMap] = useState<Record<string, FullQuestion>>({});
+  const [importedIds, setImportedIds] = useState<Set<string>>(new Set());
   const [index, setIndex] = useState(0);
   const [marksByQuestion, setMarksByQuestion] = useState<Record<string, Marks>>({});
   const [resultsByQuestion, setResultsByQuestion] = useState<
@@ -388,13 +483,76 @@ export default function App() {
   const [comparisonOpenByQuestion, setComparisonOpenByQuestion] = useState<
     Record<string, string | null>
   >({});
+  const [importError, setImportError] = useState<string | null>(null);
   const resultRef = useRef<HTMLElement>(null);
+  const quizSessionRef = useRef(0);
 
   useEffect(() => {
+    let active = true;
+
     fetchQuestions()
-      .then(setQuestions)
-      .catch((e: Error) => setError(e.message));
+      .then((fetchedBankQuestions) => {
+        if (!active) return;
+        const savedImport = loadImportedQuestions();
+        let imported = savedImport.questions;
+        let warning = savedImport.warning;
+        const conflicts = findQuestionIdConflicts(
+          imported,
+          fetchedBankQuestions,
+        );
+        if (conflicts.length > 0) {
+          clearImportedQuestions();
+          imported = [];
+          warning = `Saved import was removed because these IDs conflict with the question bank: ${conflicts.join(', ')}`;
+        }
+
+        const importedMap: Record<string, FullQuestion> = {};
+        const importedIdSet = new Set<string>();
+        for (const q of imported) {
+          importedMap[q.id] = q;
+          importedIdSet.add(q.id);
+        }
+        setBankQuestions(fetchedBankQuestions);
+        setImportedQuestionsMap(importedMap);
+        setImportedIds(importedIdSet);
+        setImportError((current) => warning ?? current);
+
+        const importedPublic = imported.map(toPublicQuestion);
+        const merged = [...importedPublic, ...fetchedBankQuestions];
+        setQuestions(merged);
+      })
+      .catch((e: Error) => {
+        if (active) setError(e.message);
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
+
+  function resetQuizSession() {
+    quizSessionRef.current += 1;
+    setIndex(0);
+    setMarksByQuestion({});
+    setResultsByQuestion({});
+    setView('quiz');
+    setDisclosureOpen({});
+    setComparisonOpenByQuestion({});
+    setSubmitting(false);
+    setError(null);
+  }
+
+  function applyImportedDataset(imported: FullQuestion[]) {
+    setImportedQuestionsMap(
+      Object.fromEntries(imported.map((question) => [question.id, question])),
+    );
+    setImportedIds(new Set(imported.map((question) => question.id)));
+    setQuestions([
+      ...imported.map(toPublicQuestion),
+      ...bankQuestions,
+    ]);
+    resetQuizSession();
+  }
 
   if (error && !questions) return <main className="page"><p className="error">{error}</p></main>;
   if (!questions) return <main className="page"><p>Loading…</p></main>;
@@ -413,23 +571,34 @@ export default function App() {
 
   async function handleSubmit() {
     if (!selectedOptionId) return;
+    const quizSession = quizSessionRef.current;
     setSubmitting(true);
     setError(null);
     try {
-      const res = await submitAnswer({
+      const payload: SubmitAnswerPayload = {
         questionId: question.id,
         selectedOptionId,
         secondChoiceOptionId,
         eliminatedOptionIds: idsWithMark(marks, 'eliminated'),
-      });
+      };
+
+      if (importedIds.has(question.id)) {
+        payload.authoredQuestion = importedQuestionsMap[question.id];
+      }
+
+      const res = await submitAnswer(payload);
+      if (quizSession !== quizSessionRef.current) return;
       setResultsByQuestion((prev) => ({ ...prev, [question.id]: res }));
       requestAnimationFrame(() => {
         resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
     } catch (e) {
+      if (quizSession !== quizSessionRef.current) return;
       setError((e as Error).message);
     } finally {
-      setSubmitting(false);
+      if (quizSession === quizSessionRef.current) {
+        setSubmitting(false);
+      }
     }
   }
 
@@ -554,6 +723,47 @@ export default function App() {
           </div>
         </div>
       </div>
+
+      <ImportControl
+        importedCount={importedIds.size}
+        importError={importError}
+        onImport={(file) => {
+          try {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              try {
+                const json = JSON.parse(e.target?.result as string);
+                const imported = parseImportedJSON(json);
+                const conflicts = findQuestionIdConflicts(
+                  imported,
+                  bankQuestions,
+                );
+                if (conflicts.length > 0) {
+                  throw new Error(
+                    `Question IDs conflict with the question bank: ${conflicts.join(', ')}`,
+                  );
+                }
+
+                saveImportedQuestions(imported);
+                applyImportedDataset(imported);
+                setImportError(null);
+              } catch (err) {
+                setImportError((err as Error).message);
+              }
+            };
+            reader.onerror = () => setImportError('Failed to read file');
+            reader.readAsText(file);
+          } catch (err) {
+            setImportError((err as Error).message);
+          }
+        }}
+        onClear={() => {
+          clearImportedQuestions();
+          applyImportedDataset([]);
+          setImportError(null);
+        }}
+      />
+
       <p className="progress">
         Question {index + 1} of {questions.length}
       </p>

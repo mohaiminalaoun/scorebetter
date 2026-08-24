@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { getFirstQuestion } from '../questions/questions.repository';
+import type {
+  GradableQuestion,
+  Question,
+} from '../questions/question.model';
 import {
   classifyMarks,
   getAvailableComparisons,
@@ -321,3 +325,274 @@ test('getAvailableComparisons flags crystal-clear as reinforcement framing', () 
   assert.equal(comparisons[0].framing, 'reinforcement');
 });
 
+test('submit with bank question ignores the client-supplied authoredQuestion', () => {
+  const question = getFirstQuestion();
+  const service = new QuizService();
+  const fakeAuthoredQuestion: Question = {
+    id: question.id,
+    prompt: 'Fake prompt',
+    options: [
+      { id: 'A', text: 'Fake' },
+      { id: 'B', text: 'Fake' },
+      { id: 'C', text: 'Fake' },
+      { id: 'D', text: 'Fake' },
+    ],
+    domain: 'Craft and Structure',
+    skill: 'Fake',
+    source: { publisher: 'ScoreBetter', origin: 'original-practice', authoredBy: 'human' },
+    optionRanking: ['A', 'B', 'C', 'D'],
+    optionAnalysis: [
+      { optionId: 'A', rank: 1, classification: 'correct', rationale: 'Fake', likelyReasoning: 'Fake' },
+      { optionId: 'B', rank: 2, classification: 'primary-trap', rationale: 'Fake', likelyReasoning: 'Fake' },
+      { optionId: 'C', rank: 3, classification: 'secondary-distractor', rationale: 'Fake', likelyReasoning: 'Fake' },
+      { optionId: 'D', rank: 4, classification: 'weak-distractor', rationale: 'Fake', likelyReasoning: 'Fake' },
+    ],
+  };
+
+  const result = service.submit({
+    questionId: question.id,
+    selectedOptionId: question.optionRanking[0],
+    authoredQuestion: fakeAuthoredQuestion,
+  });
+
+  assert.equal(result.correct, true);
+  assert.equal(result.correctOptionId, question.optionRanking[0]);
+});
+
+test('submit with unknown question id uses the authoredQuestion from payload', () => {
+  const service = new QuizService();
+  const authoredQuestion: Question = {
+    id: 'uploaded-question-001',
+    prompt: 'Which is correct?',
+    passage: 'Some passage',
+    options: [
+      { id: 'A', text: 'Option A' },
+      { id: 'B', text: 'Option B' },
+      { id: 'C', text: 'Option C' },
+      { id: 'D', text: 'Option D' },
+    ],
+    domain: 'Craft and Structure',
+    skill: 'Test Skill',
+    source: {
+      publisher: 'ScoreBetter',
+      origin: 'original-practice',
+      authoredBy: 'human',
+    },
+    optionRanking: ['B', 'A', 'C', 'D'],
+    optionAnalysis: [
+      { optionId: 'B', rank: 1, classification: 'correct', rationale: 'Correct', likelyReasoning: 'Correct' },
+      { optionId: 'A', rank: 2, classification: 'primary-trap', rationale: 'Trap', likelyReasoning: 'Tempting' },
+      { optionId: 'C', rank: 3, classification: 'secondary-distractor', rationale: 'Wrong', likelyReasoning: 'Less' },
+      { optionId: 'D', rank: 4, classification: 'weak-distractor', rationale: 'Wrong', likelyReasoning: 'Least' },
+    ],
+  };
+
+  const result = service.submit({
+    questionId: 'uploaded-question-001',
+    selectedOptionId: 'B',
+    authoredQuestion,
+  });
+
+  assert.equal(result.correct, true);
+  assert.equal(result.correctOptionId, 'B');
+  assert.equal(result.trapOptionId, 'A');
+});
+
+test('submit rejects authoredQuestion with missing fields', () => {
+  const service = new QuizService();
+
+  assert.throws(
+    () =>
+      service.submit({
+        questionId: 'unknown-001',
+        selectedOptionId: 'A',
+        authoredQuestion: {
+          id: 'unknown-001',
+          prompt: 'Test',
+          options: [{ id: 'A', text: 'Test' }],
+        } as never,
+      }),
+    BadRequestException,
+  );
+});
+
+test('submit rejects authoredQuestion with invalid optionRanking references', () => {
+  const service = new QuizService();
+
+  assert.throws(
+    () =>
+      service.submit({
+        questionId: 'unknown-001',
+        selectedOptionId: 'A',
+        authoredQuestion: {
+          id: 'unknown-001',
+          prompt: 'Test',
+          options: [
+            { id: 'A', text: 'Option A' },
+            { id: 'B', text: 'Option B' },
+            { id: 'C', text: 'Option C' },
+            { id: 'D', text: 'Option D' },
+          ],
+          optionRanking: ['A', 'B', 'X', 'D'] as never,
+          optionAnalysis: [{}, {}, {}, {}],
+        } as never,
+      }),
+    BadRequestException,
+  );
+});
+
+function makeValidAuthoredQuestion(): GradableQuestion {
+  return {
+    id: 'uploaded-validation-001',
+    prompt: 'Which option is correct?',
+    passage: 'A short passage.',
+    options: [
+      { id: 'A', text: 'Option A' },
+      { id: 'B', text: 'Option B' },
+      { id: 'C', text: 'Option C' },
+      { id: 'D', text: 'Option D' },
+    ],
+    domain: 'Craft and Structure',
+    skill: 'Test Skill',
+    optionRanking: ['B', 'A', 'C', 'D'],
+    optionAnalysis: [
+      {
+        optionId: 'B',
+        rank: 1,
+        classification: 'correct',
+        rationale: 'Correct rationale',
+        likelyReasoning: 'Correct reasoning',
+      },
+      {
+        optionId: 'A',
+        rank: 2,
+        classification: 'primary-trap',
+        rationale: 'Trap rationale',
+        likelyReasoning: 'Trap reasoning',
+      },
+      {
+        optionId: 'C',
+        rank: 3,
+        classification: 'secondary-distractor',
+        rationale: 'Secondary rationale',
+        likelyReasoning: 'Secondary reasoning',
+      },
+      {
+        optionId: 'D',
+        rank: 4,
+        classification: 'weak-distractor',
+        rationale: 'Weak rationale',
+        likelyReasoning: 'Weak reasoning',
+      },
+    ],
+  };
+}
+
+test('submit preserves 404 for unknown question without authored data', () => {
+  const service = new QuizService();
+
+  assert.throws(
+    () =>
+      service.submit({
+        questionId: 'missing-question',
+        selectedOptionId: 'A',
+      }),
+    NotFoundException,
+  );
+});
+
+test('submit rejects an authored question whose id differs from questionId', () => {
+  const service = new QuizService();
+
+  assert.throws(
+    () =>
+      service.submit({
+        questionId: 'different-id',
+        selectedOptionId: 'B',
+        authoredQuestion: makeValidAuthoredQuestion(),
+      }),
+    BadRequestException,
+  );
+});
+
+test('submit rejects duplicate authored option ids', () => {
+  const service = new QuizService();
+  const authoredQuestion = makeValidAuthoredQuestion();
+  authoredQuestion.options[3].id = 'C';
+
+  assert.throws(
+    () =>
+      service.submit({
+        questionId: authoredQuestion.id,
+        selectedOptionId: 'B',
+        authoredQuestion,
+      }),
+    BadRequestException,
+  );
+});
+
+test('submit rejects an authored ranking that repeats an option', () => {
+  const service = new QuizService();
+  const authoredQuestion = makeValidAuthoredQuestion();
+  authoredQuestion.optionRanking = ['B', 'A', 'C', 'C'];
+
+  assert.throws(
+    () =>
+      service.submit({
+        questionId: authoredQuestion.id,
+        selectedOptionId: 'B',
+        authoredQuestion,
+      }),
+    BadRequestException,
+  );
+});
+
+test('submit rejects authored analysis with an invalid classification', () => {
+  const service = new QuizService();
+  const authoredQuestion = makeValidAuthoredQuestion();
+  authoredQuestion.optionAnalysis[1].classification = 'correct';
+
+  assert.throws(
+    () =>
+      service.submit({
+        questionId: authoredQuestion.id,
+        selectedOptionId: 'B',
+        authoredQuestion,
+      }),
+    BadRequestException,
+  );
+});
+
+test('submit rejects authored analysis that does not cover every option', () => {
+  const service = new QuizService();
+  const authoredQuestion = makeValidAuthoredQuestion();
+  authoredQuestion.optionAnalysis[3] = {
+    ...authoredQuestion.optionAnalysis[2],
+  };
+
+  assert.throws(
+    () =>
+      service.submit({
+        questionId: authoredQuestion.id,
+        selectedOptionId: 'B',
+        authoredQuestion,
+      }),
+    BadRequestException,
+  );
+});
+
+test('submit rejects missing authored option text', () => {
+  const service = new QuizService();
+  const authoredQuestion = makeValidAuthoredQuestion();
+  authoredQuestion.options[0].text = '   ';
+
+  assert.throws(
+    () =>
+      service.submit({
+        questionId: authoredQuestion.id,
+        selectedOptionId: 'B',
+        authoredQuestion,
+      }),
+    BadRequestException,
+  );
+});

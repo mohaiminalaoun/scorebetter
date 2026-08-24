@@ -1,4 +1,7 @@
-import type { OptionClassification, Question } from '../questions/question.model';
+import type {
+  GradableQuestion,
+  OptionClassification,
+} from '../questions/question.model';
 
 export type DiagnosticLabel =
   | 'crystal-clear'
@@ -86,7 +89,7 @@ const WRONG_OPTION_ANALYSIS_HEADINGS: Record<
  */
 export function classifyMarks(
   marks: Marks,
-  optionRanking: Question['optionRanking'],
+  optionRanking: GradableQuestion['optionRanking'],
 ): DiagnosticLabel {
   const [correctOptionId, trapOptionId] = optionRanking;
   const secondChoiceOptionId = marks.secondChoiceOptionId ?? null;
@@ -123,7 +126,7 @@ export function classifyMarks(
 
 /** Thin wrapper around the authored option analysis, shaped for display. */
 export function getOptionAnalysisFor(
-  question: Question,
+  question: GradableQuestion,
   optionId: string,
 ): OptionAnalysisView {
   const analysis = question.optionAnalysis.find((a) => a.optionId === optionId);
@@ -144,7 +147,7 @@ export function getOptionAnalysisFor(
 }
 
 function comparisonRoleFor(
-  question: Question,
+  question: GradableQuestion,
   marks: Marks,
   optionId: string,
 ): ComparisonRole {
@@ -161,7 +164,7 @@ function comparisonRoleFor(
 
 /** One option's analysis plus its role relative to the student's marks. */
 export function getComparisonSide(
-  question: Question,
+  question: GradableQuestion,
   marks: Marks,
   optionId: string,
 ): ComparisonSide {
@@ -173,7 +176,7 @@ export function getComparisonSide(
 
 /** Both sides of an arbitrary option pair, so the frontend can request any comparison. */
 export function getComparison(
-  question: Question,
+  question: GradableQuestion,
   marks: Marks,
   optionIdA: string,
   optionIdB: string,
@@ -214,7 +217,7 @@ const DRAFT_FRAMING_COPY = {
  */
 export function getAvailableComparisons(
   label: DiagnosticLabel,
-  question: Question,
+  question: GradableQuestion,
   marks: Marks,
 ): ComparisonOption[] {
   const [correctOptionId, trapOptionId] = question.optionRanking;
@@ -333,7 +336,7 @@ export function getAvailableComparisons(
 
 export function buildDiagnosticExplanation(
   label: DiagnosticLabel,
-  question: Question,
+  question: GradableQuestion,
   marks: Marks,
 ): string[] {
   const correctOptionId = question.optionRanking[0];

@@ -42,15 +42,18 @@ export type QuestionSource =
       authoredBy: 'ai-draft' | 'human';
     };
 
-export type Question = {
+export type GradableQuestion = {
   id: string;
   prompt: string;
   passage?: string;
   options: Option[];
   domain: ReadingWritingDomain;
   skill: string;
-  source: QuestionSource;
   /** Our authored best-to-worst diagnostic ranking, not a College Board ranking. */
   optionRanking: [string, string, string, string];
   optionAnalysis: [OptionAnalysis, OptionAnalysis, OptionAnalysis, OptionAnalysis];
+};
+
+export type Question = GradableQuestion & {
+  source: QuestionSource;
 };

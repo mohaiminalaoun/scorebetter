@@ -25,11 +25,19 @@ cd frontend && npm install && npm run dev   # http://localhost:5173
 - `GET  /api/questions` — all questions for the quiz UI. Omits correct answers, rankings, and authored analysis.
 - `GET  /api/question` — the first question in the bank (same shape as one element of `/api/questions`).
 - `POST /api/submit` — body: `{ questionId, selectedOptionId, secondChoiceOptionId, eliminatedOptionIds }`.
+  Browser-imported questions also include a validated `authoredQuestion` used
+  only when the ID is absent from the server bank.
   Returns `{ correct, correctOptionId, trapOptionId, selectedOptionId, secondChoiceWasCorrect, label, explanation, trapExplanation }`.
 
-Authored option rankings and per-option analysis live on the server only and are
-never sent to the client before submission. Rank 1 is the correct answer; rank 2
-is the authored primary trap.
+For server-bank questions, authored rankings and analysis live only on the
+server and are never sent to the client before submission. Rank 1 is the
+correct answer; rank 2 is the authored primary trap.
+
+User-imported questions are different: the separately supplied JSON file
+contains the full grading metadata, so its answers and analysis are available
+to the person importing it and are stored in that browser's local storage. The
+backend receives the imported question transiently for grading but does not add
+it to the shared question bank or persist it.
 
 ### Question bank
 
@@ -38,6 +46,25 @@ is the authored primary trap.
   `backend/src/questions/sat-reading-writing.questions.official.ts` (gitignored)
   exporting `OFFICIAL_QUESTIONS`. When present, those items are prepended to the
   bank; when absent, the app runs on originals only.
+
+### Private JSON import
+
+To create a local JSON file from the optional private question source:
+
+```bash
+cd backend
+npm run export-questions
+```
+
+The command verifies that the private source exists, builds it, and writes
+`official-questions.json` at the repository root. Both that JSON file and the
+private TypeScript source are Git-ignored and must be shared separately from the
+repository. The quiz rejects duplicate question IDs and IDs that collide with
+the server bank. Importing or clearing a file starts a fresh quiz session.
+
+Keeping material out of Git reduces accidental publication through the
+repository; it does not determine whether distributing a separate source file
+is legally permitted.
 
 ## Marking rules
 

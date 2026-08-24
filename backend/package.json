@@ -6,7 +6,8 @@
     "build": "tsc -p tsconfig.json",
     "test": "npm run build && node --test dist/quiz/diagnostic-classifier.spec.js",
     "start": "node dist/main.js",
-    "dev": "ts-node-dev --respawn src/main.ts"
+    "dev": "ts-node-dev --respawn src/main.ts",
+    "export-questions": "node scripts/export-official-questions.cjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
