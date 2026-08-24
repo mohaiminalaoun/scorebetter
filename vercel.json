@@ -1,20 +1,13 @@
 {
-  "services": {
-    "frontend": {
-      "root": "frontend",
-      "buildCommand": "npm run build",
-      "outputDirectory": "dist",
-      "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
-    },
-    "backend": {
-      "root": "backend",
-      "buildCommand": "npm run build",
-      "outputDirectory": "dist",
-      "entrypoint": "main.js"
+  "buildCommand": "npm install && cd backend && npm run build && cd ../frontend && npm run build",
+  "outputDirectory": "frontend/dist",
+  "functions": {
+    "api/**/*.ts": {
+      "runtime": "nodejs20.x"
     }
   },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": { "service": "backend" } },
-    { "source": "/(.*)", "destination": { "service": "frontend" } }
+    { "source": "/api/(.*)", "destination": "/api/index.ts" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
