@@ -99,7 +99,7 @@ This repo is a Vercel **Services** app: Vite frontend + NestJS API on one URL. L
    - the site URL
    - `official-questions.json` **separately** (email, AirDrop, Drive — not Git)
 
-The browser calls `/api` on the same host. Imported questions stay in that browser’s `localStorage`. The public bank is original practice items only.
+The browser calls `/api` on the same host. If the UI is on a different Vercel project, set `VITE_API_URL` to the API origin (with or without `/api`) and redeploy the frontend. Imported questions stay in that browser’s `localStorage`. The public bank is original practice items only.
 
 ## Next steps
 

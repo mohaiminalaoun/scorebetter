@@ -1,6 +1,13 @@
 import type { Question, SubmitAnswerPayload, SubmitResult } from './types';
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? '/api';
+function apiBase(): string {
+  const raw = import.meta.env.VITE_API_URL as string | undefined;
+  if (!raw) return '/api';
+  const trimmed = raw.replace(/\/$/, '');
+  return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
+}
+
+const BASE_URL = apiBase();
 
 export async function fetchQuestion(): Promise<Question> {
   const res = await fetch(`${BASE_URL}/question`);
