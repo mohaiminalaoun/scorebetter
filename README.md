@@ -87,44 +87,19 @@ cd frontend && npm run e2e:open   # interactive
 
 ## Deploy
 
-### Two-project deployment (recommended)
+### On Vercel (free, one project)
 
-Deploy the frontend and backend to separate Vercel projects for simplicity and to avoid Node.js serverless complexity with NestJS.
-
-#### Backend (Vercel or any Node host)
-
-1. Create a new Vercel project from the `backend/` directory, or deploy to Render/Railway/Fly.
-2. Make sure the deployed backend responds to `GET /api/questions`, `GET /api/question`, and `POST /api/submit`.
-3. Copy the backend URL (e.g., `https://scorebetter-api.vercel.app`).
-
-#### Frontend (Vercel)
+This repo is a Vercel **Services** app: Vite frontend + NestJS API on one URL. Leave **Root Directory** empty so Vercel reads the root `vercel.json`.
 
 1. Push to GitHub.
-2. Create a new Vercel project from this repo.
-3. Set environment variable:
-   - **VITE_API_URL** = your backend URL (e.g., `https://scorebetter-api.vercel.app`)
-4. Deploy. The frontend will call your backend for API requests.
-5. Test it: open the URL, import a JSON file, submit answers.
-6. Share with users:
-   - Send the frontend URL
-   - Share `official-questions.json` **separately** (email, AirDrop, Drive — not Git)
+2. In Vercel: **Add New Project** → import this repo. Framework should be **Services**.
+3. Deploy. You get a production URL (e.g. `scorebetter.vercel.app`).
+4. Test: open the URL, load questions, import a JSON file, submit answers.
+5. Share:
+   - the site URL
+   - `official-questions.json` **separately** (email, AirDrop, Drive — not Git)
 
-#### How it works
-
-Imported questions are stored in **browser localStorage** only — clearing site data or using another device requires re-importing.
-
-The public frontend serves original practice questions by default. Imported official questions are private to each browser; they are validated and graded by the backend but never stored on the server.
-
-### Local development
-
-Two terminals:
-
-```bash
-cd backend  && npm install && npm run dev   # http://localhost:3000
-cd frontend && npm install && npm run dev   # http://localhost:5173
-```
-
-The frontend proxies `/api` → `localhost:3000` during development via `vite.config.ts`.
+The browser calls `/api` on the same host. Imported questions stay in that browser’s `localStorage`. The public bank is original practice items only.
 
 ## Next steps
 
