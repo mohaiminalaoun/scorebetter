@@ -85,6 +85,24 @@ cd frontend && npm run e2e        # headless Cypress
 cd frontend && npm run e2e:open   # interactive
 ```
 
+## Deploy
+
+### On Vercel (free)
+
+1. Push to GitHub (if not already).
+2. In Vercel: **Add New Project** → import this repo → leave Root Directory as repo root.
+3. Deploy. You get a production URL (e.g., `scorebetter.vercel.app`).
+4. Test it yourself: open the URL, import a JSON file, submit answers.
+5. Share with users:
+   - Send the site URL
+   - Share `official-questions.json` **separately** (email, AirDrop, Drive — not Git)
+
+#### How it works
+
+Frontend and backend run as one Vercel project. The browser calls `/api` on the same host. Imported questions are stored in **browser localStorage** only — clearing site data or using another device requires re-importing.
+
+The public URL serves original practice questions by default. Imported official questions are private to each browser; they are validated and graded by the backend but never stored on the server.
+
 ## Next steps
 
 Persistence, auth, AI explanations, and expanding the original practice bank.
