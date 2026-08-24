@@ -1,10 +1,10 @@
-import 'reflect-metadata';
-import { NestFactory } from '@nestjs/core';
-import { ExpressAdapter } from '@nestjs/platform-express';
-import express from 'express';
-import { AppModule } from '../backend/src/app.module';
+require('reflect-metadata');
+const { NestFactory } = require('@nestjs/core');
+const { ExpressAdapter } = require('@nestjs/platform-express');
+const express = require('express');
+const { AppModule } = require('../backend/dist/app.module');
 
-let app: any = null;
+let app = null;
 
 async function initApp() {
   if (app) return app;
@@ -23,12 +23,12 @@ async function initApp() {
   return expressApp;
 }
 
-export default async (req: any, res: any) => {
+module.exports = async (req, res) => {
   try {
     const expressApp = await initApp();
     return expressApp(req, res);
   } catch (err) {
     console.error('Error initializing app:', err);
-    res.status(500).json({ error: 'Failed to initialize API' });
+    res.status(500).json({ error: 'Failed to initialize API', details: err.message });
   }
 };
