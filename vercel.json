@@ -5,7 +5,8 @@
       "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
     },
     "backend": {
-      "root": "backend"
+      "root": "backend",
+      "entrypoint": "src/main.ts"
     }
   },
   "rewrites": [
