@@ -3,11 +3,11 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "build": "npm run clean && tsc -p tsconfig.json",
     "test": "npm run build && node --test dist/quiz/diagnostic-classifier.spec.js",
     "start": "node dist/main.js",
-    "dev": "ts-node-dev --respawn src/main.ts",
-    "export-questions": "node scripts/export-official-questions.cjs"
+    "dev": "ts-node-dev --respawn src/main.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",

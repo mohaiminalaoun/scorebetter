@@ -41,30 +41,16 @@ it to the shared question bank or persist it.
 
 ### Question bank
 
-- **Public repo:** [backend/src/questions/sat-reading-writing.questions.ts](backend/src/questions/sat-reading-writing.questions.ts) exports original ScoreBetter practice items only.
-- **Private deploy (optional):** add a local file
-  `backend/src/questions/sat-reading-writing.questions.official.ts` (gitignored)
-  exporting `OFFICIAL_QUESTIONS`. When present, those items are prepended to the
-  bank; when absent, the app runs on originals only.
+- [backend/src/questions/sat-reading-writing.questions.ts](backend/src/questions/sat-reading-writing.questions.ts)
+  is the canonical nine-question runtime bank and contains only original
+  ScoreBetter practice items.
+- Four human-reviewed originals live in
+  `backend/src/questions/sat-reading-writing.replacement-candidates.ts` and are
+  included in the canonical bank.
 
-### Private JSON import
-
-To create a local JSON file from the optional private question source:
-
-```bash
-cd backend
-npm run export-questions
-```
-
-The command verifies that the private source exists, builds it, and writes
-`official-questions.json` at the repository root. Both that JSON file and the
-private TypeScript source are Git-ignored and must be shared separately from the
-repository. The quiz rejects duplicate question IDs and IDs that collide with
-the server bank. Importing or clearing a file starts a fresh quiz session.
-
-Keeping material out of Git reduces accidental publication through the
-repository; it does not determine whether distributing a separate source file
-is legally permitted.
+The optional browser JSON import remains available for custom questions. The
+quiz rejects duplicate IDs and IDs that collide with the server bank. Importing
+or clearing a file starts a fresh quiz session.
 
 ## Marking rules
 
@@ -95,11 +81,9 @@ This repo is a Vercel **Services** app: Vite frontend + NestJS API on one URL. L
 2. In Vercel: **Add New Project** → import this repo. Framework should be **Services**.
 3. Deploy. You get a production URL (e.g. `scorebetter.vercel.app`).
 4. Test: open the URL, load questions, import a JSON file, submit answers.
-5. Share:
-   - the site URL
-   - `official-questions.json` **separately** (email, AirDrop, Drive — not Git)
+5. Share the site URL.
 
-The browser calls `/api` on the same host. If the UI is on a different Vercel project, set `VITE_API_URL` to the API origin (with or without `/api`) and redeploy the frontend. Imported questions stay in that browser’s `localStorage`. The public bank is original practice items only.
+The browser calls `/api` on the same host. If the UI is on a different Vercel project, set `VITE_API_URL` to the API origin (with or without `/api`) and redeploy the frontend. Imported questions stay in that browser's `localStorage`. The runtime bank contains original practice items only.
 
 ## Next steps
 

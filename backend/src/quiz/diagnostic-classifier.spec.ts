@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { getFirstQuestion } from '../questions/questions.repository';
+import { validateAuthoredQuestion } from '../questions/authored-question-validation';
+import {
+  getAllQuestions,
+  getFirstQuestion,
+} from '../questions/questions.repository';
+import { ORIGINAL_REPLACEMENT_CANDIDATES } from '../questions/sat-reading-writing.replacement-candidates';
 import type {
   GradableQuestion,
   Question,
@@ -17,6 +22,64 @@ import {
 import { QuizService } from './quiz.service';
 
 const ranking: [string, string, string, string] = ['A', 'B', 'C', 'D'];
+
+test('runtime bank contains only the nine approved ScoreBetter originals', () => {
+  const questions = getAllQuestions();
+
+  assert.equal(questions.length, 9);
+  assert.equal(new Set(questions.map((question) => question.id)).size, 9);
+  assert.ok(
+    questions.every(
+      (question) =>
+        question.source.publisher === 'ScoreBetter' &&
+        !question.id.startsWith('college-board-'),
+    ),
+  );
+});
+
+test('approved replacements are structurally valid and included in the runtime bank', () => {
+  const runtimeIds = new Set(getAllQuestions().map((question) => question.id));
+
+  assert.equal(ORIGINAL_REPLACEMENT_CANDIDATES.length, 4);
+  assert.equal(
+    new Set(ORIGINAL_REPLACEMENT_CANDIDATES.map((question) => question.id)).size,
+    4,
+  );
+
+  for (const question of ORIGINAL_REPLACEMENT_CANDIDATES) {
+    assert.doesNotThrow(() => validateAuthoredQuestion(question));
+    assert.equal(question.source.publisher, 'ScoreBetter');
+    assert.equal(runtimeIds.has(question.id), true);
+  }
+});
+
+test('approved replacements return correct and primary-trap diagnostics', () => {
+  const service = new QuizService();
+
+  for (const question of ORIGINAL_REPLACEMENT_CANDIDATES) {
+    const [correctOptionId, trapOptionId] = question.optionRanking;
+    const correct = service.submit({
+      questionId: question.id,
+      selectedOptionId: correctOptionId,
+      secondChoiceOptionId: trapOptionId,
+    });
+    assert.equal(correct.correct, true);
+    assert.equal(correct.label, 'crystal-clear');
+
+    const trapped = service.submit({
+      questionId: question.id,
+      selectedOptionId: trapOptionId,
+      secondChoiceOptionId: correctOptionId,
+    });
+    assert.equal(trapped.correct, false);
+    assert.equal(trapped.label, 'confused-sensed-truth');
+    assert.ok(
+      trapped.explanation.some((part) =>
+        part.startsWith(`Primary-trap analysis (${trapOptionId}):`),
+      ),
+    );
+  }
+});
 
 const cases: Array<{
   name: string;

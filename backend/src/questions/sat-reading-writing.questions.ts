@@ -1,49 +1,5 @@
 import type { Question } from './question.model';
-
-const OFFICIAL_QUESTIONS_MODULE =
-  './sat-reading-writing.questions.official';
-
-/**
- * Attempts to load OFFICIAL_QUESTIONS from sat-reading-writing.questions.official.ts.
- * This file is gitignored and only present in private deployments.
- *
- * Returns an empty array if the file is not found (public repos use originals only).
- * If the file exists but is invalid, the error is thrown (do not hide broken private data).
- */
-function loadOfficialQuestions(): Question[] {
-  let modulePath: string;
-
-  try {
-    modulePath = require.resolve(OFFICIAL_QUESTIONS_MODULE);
-  } catch (err) {
-    if (
-      err instanceof Error &&
-      'code' in err &&
-      err.code === 'MODULE_NOT_FOUND'
-    ) {
-      return [];
-    }
-    throw err;
-  }
-
-  // Resolve separately so failures inside the private module are never mistaken
-  // for the optional module itself being absent.
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const privateModule: unknown = require(modulePath);
-
-  if (
-    typeof privateModule !== 'object' ||
-    privateModule === null ||
-    !('OFFICIAL_QUESTIONS' in privateModule) ||
-    !Array.isArray(privateModule.OFFICIAL_QUESTIONS)
-  ) {
-    throw new TypeError(
-      `${OFFICIAL_QUESTIONS_MODULE} must export OFFICIAL_QUESTIONS as an array`,
-    );
-  }
-
-  return privateModule.OFFICIAL_QUESTIONS as Question[];
-}
+import { ORIGINAL_REPLACEMENT_CANDIDATES } from './sat-reading-writing.replacement-candidates';
 
 /**
  * Original ScoreBetter practice items written to mirror official SAT Reading &
@@ -367,6 +323,6 @@ const ORIGINAL_PRACTICE_QUESTIONS: Question[] = [
 ];
 
 export const SAT_READING_WRITING_QUESTIONS: Question[] = [
-  ...loadOfficialQuestions(),
   ...ORIGINAL_PRACTICE_QUESTIONS,
+  ...ORIGINAL_REPLACEMENT_CANDIDATES,
 ];

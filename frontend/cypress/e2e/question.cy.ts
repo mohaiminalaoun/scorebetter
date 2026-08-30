@@ -59,6 +59,17 @@ const importJson = (contents: unknown) =>
     { force: true },
   );
 
+const requestLoadedQuestionBank = () =>
+  cy.window().then((win) => {
+    const questionsUrl = win.performance
+      .getEntriesByType('resource')
+      .map((entry) => entry.name)
+      .find((url) => url.endsWith('/api/questions'));
+
+    expect(questionsUrl, 'question-bank request URL').to.be.a('string');
+    return cy.request(questionsUrl!);
+  });
+
 describe('SAT question flow', () => {
   beforeEach(() => {
     cy.visit('/', {
@@ -76,7 +87,13 @@ describe('SAT question flow', () => {
   });
 
   it('does not leak the correct answer to the client', () => {
-    cy.request('http://localhost:3000/api/question').its('body').should('not.have.property', 'correctOptionId');
+    requestLoadedQuestionBank().then(({ body }) => {
+      const questions = body as Array<Record<string, unknown>>;
+      expect(questions).not.to.be.empty;
+      questions.forEach((question) => {
+        expect(question).not.to.have.property('correctOptionId');
+      });
+    });
   });
 
   it('disables submit until an answer is selected', () => {
@@ -195,8 +212,9 @@ describe('SAT question flow', () => {
   });
 
   it('rejects imported IDs that collide with the server bank', () => {
-    cy.request('http://localhost:3000/api/questions').then(({ body }) => {
-      importJson([importedQuestion(body[0].id)]);
+    requestLoadedQuestionBank().then(({ body }) => {
+      const questions = body as Array<{ id: string }>;
+      importJson([importedQuestion(questions[0].id)]);
     });
 
     cy.contains('Error: Question IDs conflict with the question bank:');
