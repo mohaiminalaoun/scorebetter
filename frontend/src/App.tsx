@@ -78,6 +78,7 @@ function splitExplanation(parts: string[]) {
 }
 
 type OptionRevealRole = 'correct' | 'wrong-pick' | 'trap';
+type OptionDisclosureRole = OptionRevealRole | 'other';
 
 /** How the student handled this option — drives card color after submit. */
 type OptionOutcome = 'good' | 'mistake' | 'neutral';
@@ -161,7 +162,7 @@ function getOptionVerdictLabel(
   }
 }
 
-function getDisclosureLabel(role: OptionRevealRole): string {
+function getDisclosureLabel(role: OptionDisclosureRole): string {
   switch (role) {
     case 'trap':
       return 'Why is this a trap?';
@@ -169,6 +170,8 @@ function getDisclosureLabel(role: OptionRevealRole): string {
       return "Why isn't this right?";
     case 'correct':
       return 'Why is this actually right?';
+    case 'other':
+      return "Why doesn't this work?";
   }
 }
 
@@ -206,7 +209,7 @@ function OptionDisclosureContent({
   optionId,
   result,
 }: {
-  role: OptionRevealRole;
+  role: OptionDisclosureRole;
   optionId: string;
   result: SubmitResult;
 }) {
@@ -782,7 +785,9 @@ export default function App() {
           const disclosureRole =
             revealRole && result
               ? getDisclosureRole(revealRole, option.id, result)
-              : null;
+              : result
+                ? 'other'
+                : null;
           const cardTypeClass = result
             ? revealRole
               ? `option-type-${revealRole}`
@@ -822,7 +827,7 @@ export default function App() {
                       {getOptionVerdictLabel(revealRole, option.id, result, marks)}
                     </span>
                   )}
-                  {revealRole && (
+                  {disclosureRole && (
                     <>
                       <button
                         type="button"
@@ -830,12 +835,12 @@ export default function App() {
                         aria-expanded={isDisclosureOpen}
                         onClick={() => toggleDisclosure(option.id)}
                       >
-                        <span>{getDisclosureLabel(disclosureRole!)}</span>
+                        <span>{getDisclosureLabel(disclosureRole)}</span>
                         <span className="option-disclosure-chevron" aria-hidden>
                           ▼
                         </span>
                       </button>
-                      {isDisclosureOpen && disclosureRole && (
+                      {isDisclosureOpen && (
                         <OptionDisclosureContent
                           role={disclosureRole}
                           optionId={option.id}

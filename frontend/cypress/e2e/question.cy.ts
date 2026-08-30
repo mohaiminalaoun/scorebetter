@@ -139,6 +139,17 @@ describe('SAT question flow', () => {
     cy.contains('.result', 'Your second choice was the correct answer.');
   });
 
+  it('explains every answer choice after submission', () => {
+    importJson([importedQuestion()]);
+    cy.contains('.prompt', 'Which imported option is correct?');
+    mark('C', 'selected').click();
+    cy.get('[data-testid="submit"]').click();
+
+    cy.get('.option-disclosure').should('have.length', 4);
+    option('D').contains('button', "Why doesn't this work?").click();
+    option('D').should('contain', 'D contradicts the passage.');
+  });
+
   it('does not flag the second choice when it was also wrong', () => {
     importJson([importedQuestion()]);
     cy.contains('.prompt', 'Which imported option is correct?');
