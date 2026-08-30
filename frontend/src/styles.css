@@ -456,6 +456,22 @@ h1 {
   border-color: var(--ink);
 }
 
+@media (max-width: 480px) {
+  .option:not(.option-post-submit) .option-text {
+    flex-basis: 100%;
+  }
+
+  .option:not(.option-post-submit) .marks {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .option:not(.option-post-submit) .mark {
+    min-height: 44px;
+  }
+}
+
 /* ---------- Verdict ---------- */
 .result {
   display: flex;

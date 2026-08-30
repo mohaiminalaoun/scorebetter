@@ -113,6 +113,17 @@ describe('SAT question flow', () => {
     option('D').should('not.have.class', 'eliminated');
   });
 
+  it('keeps answer text readable and marking controls touchable on mobile', () => {
+    cy.viewport(390, 844);
+
+    option('A').find('.option-copy').should(($copy) => {
+      expect($copy[0].getBoundingClientRect().width).to.be.greaterThan(240);
+    });
+    option('A').find('.mark').each(($button) => {
+      expect($button[0].getBoundingClientRect().height).to.be.at.least(44);
+    });
+  });
+
   it('reports a correct answer', () => {
     importJson([importedQuestion()]);
     cy.contains('.prompt', 'Which imported option is correct?');
