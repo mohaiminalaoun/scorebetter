@@ -979,3 +979,113 @@ button.pill {
   background: #fed7aa;
   border-color: #b45309;
 }
+
+/* ---------- Sign in ---------- */
+.login {
+  max-width: 420px;
+}
+
+.login-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 26px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.login-card h2 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 22px;
+  margin: 0;
+}
+
+.login-card p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.login-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-top: 6px;
+}
+
+.login-card input {
+  font: inherit;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.login-card input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.login-card button[type='submit'] {
+  font: inherit;
+  font-weight: 600;
+  margin-top: 6px;
+  padding: 11px 14px;
+  border: none;
+  border-radius: 9px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+
+.login-card button[type='submit']:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.login-notice {
+  background: var(--outcome-neutral-bg);
+  border: 1px solid var(--outcome-neutral-border);
+  color: var(--outcome-neutral-ink);
+  border-radius: 9px;
+  padding: 11px 13px;
+  font-size: 14px;
+  margin: 0 0 14px;
+}
+
+.login-error {
+  color: var(--incorrect);
+  font-size: 14px;
+}
+
+.link-button {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: 14px;
+  color: var(--accent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.sign-out {
+  align-self: flex-start;
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 5px 10px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.sign-out:hover {
+  border-color: var(--ink-soft);
+  color: var(--ink);
+}

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { fetchQuestions, submitAnswer } from './api';
+import { fetchMe, fetchQuestions, isUnauthorized, logout, submitAnswer } from './api';
+import LoginPage from './LoginPage';
 import type {
   ComparisonOption,
   ComparisonSide,
@@ -367,6 +368,8 @@ function ResultFeedback({
 
 type View = 'quiz' | 'stats' | 'summary';
 
+type AuthState = 'loading' | 'anon' | 'authed';
+
 type QuizStats = {
   answeredCount: number;
   correctCount: number;
@@ -489,8 +492,34 @@ export default function App() {
   const [importError, setImportError] = useState<string | null>(null);
   const resultRef = useRef<HTMLElement>(null);
   const quizSessionRef = useRef(0);
+  const [authState, setAuthState] = useState<AuthState>('loading');
+  const [linkWasInvalid] = useState(
+    () => new URLSearchParams(window.location.search).get('auth') === 'invalid',
+  );
 
   useEffect(() => {
+    let active = true;
+
+    fetchMe()
+      .then((me) => {
+        if (!active) return;
+        setAuthState(me ? 'authed' : 'anon');
+        // Drop ?auth=invalid so a refresh does not re-show the expired notice.
+        if (window.location.search) {
+          window.history.replaceState({}, '', window.location.pathname);
+        }
+      })
+      .catch(() => {
+        if (active) setAuthState('anon');
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (authState !== 'authed') return;
     let active = true;
 
     fetchQuestions()
@@ -525,13 +554,22 @@ export default function App() {
         setQuestions(merged);
       })
       .catch((e: Error) => {
-        if (active) setError(e.message);
+        if (!active) return;
+        if (isUnauthorized(e)) setAuthState('anon');
+        else setError(e.message);
       });
 
     return () => {
       active = false;
     };
-  }, []);
+  }, [authState]);
+
+  async function handleSignOut() {
+    await logout();
+    setAuthState('anon');
+    setQuestions(null);
+    resetQuizSession();
+  }
 
   function resetQuizSession() {
     quizSessionRef.current += 1;
@@ -556,6 +594,9 @@ export default function App() {
     ]);
     resetQuizSession();
   }
+
+  if (authState === 'loading') return <main className="page"><p>Loading…</p></main>;
+  if (authState === 'anon') return <LoginPage linkWasInvalid={linkWasInvalid} />;
 
   if (error && !questions) return <main className="page"><p className="error">{error}</p></main>;
   if (!questions) return <main className="page"><p>Loading…</p></main>;
@@ -597,7 +638,9 @@ export default function App() {
       });
     } catch (e) {
       if (quizSession !== quizSessionRef.current) return;
-      setError((e as Error).message);
+      // A 24h session can lapse mid-quiz; show the login page, not an error.
+      if (isUnauthorized(e)) setAuthState('anon');
+      else setError((e as Error).message);
     } finally {
       if (quizSession === quizSessionRef.current) {
         setSubmitting(false);
@@ -725,6 +768,14 @@ export default function App() {
             })}
           </div>
         </div>
+        <button
+          type="button"
+          className="sign-out"
+          data-testid="sign-out"
+          onClick={handleSignOut}
+        >
+          Sign out
+        </button>
       </div>
 
       <ImportControl
