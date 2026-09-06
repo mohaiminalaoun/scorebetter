@@ -5,6 +5,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import type { Request } from 'express';
+import { isAllowed } from './allowlist';
 import { SESSION_COOKIE_NAME, readCookie } from './cookies';
 import { verifyToken } from './tokens';
 
@@ -19,7 +20,9 @@ export class SessionGuard implements CanActivate {
     const token = readCookie(request.headers.cookie, SESSION_COOKIE_NAME);
     const payload = verifyToken(token, 'session');
 
-    if (!payload) throw new UnauthorizedException();
+    // Re-checked on every request, so dropping an address from the allowlist
+    // ends their session instead of waiting 24h for the token to lapse.
+    if (!payload || !isAllowed(payload.e)) throw new UnauthorizedException();
 
     request.user = { email: payload.e };
     return true;

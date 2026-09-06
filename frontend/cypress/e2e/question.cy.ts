@@ -70,8 +70,49 @@ const requestLoadedQuestionBank = () =>
     return cy.request(questionsUrl!);
   });
 
+const TEST_EMAIL = 'cypress@example.com';
+
+// Cypress clears cookies between tests, so every test signs in again.
+const signIn = () =>
+  cy.task('mintSession', TEST_EMAIL).then((token) => {
+    cy.setCookie('sb_session', token as string);
+  });
+
+describe('sign in', () => {
+  it('shows the sign-in form when there is no session', () => {
+    cy.visit('/');
+
+    cy.get('[data-testid="login-email"]').should('be.visible');
+    cy.get('[data-option]').should('not.exist');
+  });
+
+  it('confirms without revealing whether the address is allowed', () => {
+    cy.visit('/');
+    cy.get('[data-testid="login-email"]').type('nobody@example.com');
+    cy.get('[data-testid="login-submit"]').click();
+
+    cy.get('[data-testid="login-sent"]').should('contain', 'Check your inbox');
+  });
+
+  it('explains an expired link', () => {
+    cy.visit('/?auth=invalid');
+
+    cy.get('[data-testid="login-invalid"]').should('contain', 'expired');
+  });
+
+  it('returns to the sign-in form after signing out', () => {
+    signIn();
+    cy.visit('/');
+    cy.contains('.eyebrow', 'SAT English');
+
+    cy.get('[data-testid="sign-out"]').click();
+    cy.get('[data-testid="login-email"]').should('be.visible');
+  });
+});
+
 describe('SAT question flow', () => {
   beforeEach(() => {
+    signIn();
     cy.visit('/', {
       onBeforeLoad(win) {
         win.localStorage.clear();
