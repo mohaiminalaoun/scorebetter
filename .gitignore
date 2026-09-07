@@ -9,3 +9,4 @@ official-questions.json
 .vercel
 .env
 .env.local
+prod-secret.txt
