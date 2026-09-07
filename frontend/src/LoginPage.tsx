@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import AnimatedWordmark from './AnimatedWordmark';
 import { requestMagicLink } from './api';
 
 export default function LoginPage({ linkWasInvalid }: { linkWasInvalid: boolean }) {
@@ -20,7 +21,7 @@ export default function LoginPage({ linkWasInvalid }: { linkWasInvalid: boolean 
 
   return (
     <main className="page login">
-      <p className="eyebrow">ScoreBetter</p>
+      <AnimatedWordmark />
 
       {linkWasInvalid && status !== 'sent' && (
         <p className="login-notice" data-testid="login-invalid">
